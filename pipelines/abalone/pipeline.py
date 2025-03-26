@@ -1,4 +1,4 @@
-"""Example workflow pipeline script for abalone pipeline.
+"""Example workflow pipeline script for Fraud pipeline.
                                                                                  . -ModelStep
                                                                                 .
     Process-> DataQualityCheck/DataBiasCheck -> Train -> Evaluate -> Condition .
@@ -8,7 +8,7 @@
                                                    -> CreateModel-> ModelBiasCheck/ModelExplainabilityCheck
                                                            |
                                                            |
-                                                            -> BatchTransform -> ModelQualityCheck
+                                                            -> BatchTransform(for now) -> ModelQualityCheck
 
 Implements a get_pipeline(**kwargs) method.
 """
@@ -79,7 +79,7 @@ from sagemaker.clarify import (
     ModelConfig
 )
 from sagemaker.workflow.model_step import ModelStep
-from sagemaker.model import Model
+
 from sagemaker.workflow.pipeline_context import PipelineSession
 
 
@@ -162,14 +162,14 @@ def get_pipeline(
     region,
     role=None,
     default_bucket=None,
-    model_package_group_name="AbalonePackageGroup",
-    pipeline_name="AbalonePipeline",
-    base_job_prefix="Abalone",
+    model_package_group_name="FraudPackageGroup",
+    pipeline_name="FraudPipeline",
+    base_job_prefix="Fraud",
     processing_instance_type="ml.m5.xlarge",
     training_instance_type="ml.m5.xlarge",
     sagemaker_project_name=None,
 ):
-    """Gets a SageMaker ML Pipeline instance working with on abalone data.
+    """Gets a SageMaker ML Pipeline instance working with on Fraud data.
 
     Args:
         region: AWS region to create and run the pipeline.
@@ -193,7 +193,7 @@ def get_pipeline(
     )
     input_data = ParameterString(
         name="InputDataUrl",
-        default_value=f"s3://sagemaker-servicecatalog-seedcode-{region}/dataset/abalone-dataset.csv",
+        default_value=f"s3://akshronix-frauddata/Chandan's Playground/Whole Fraud Dataframe.csv",
     )
 
     # for data quality check step
@@ -228,7 +228,7 @@ def get_pipeline(
         framework_version="0.23-1",
         instance_type=processing_instance_type,
         instance_count=processing_instance_count,
-        base_job_name=f"{base_job_prefix}/sklearn-abalone-preprocess",
+        base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
         sagemaker_session=pipeline_session,
         role=role,
     )
@@ -244,7 +244,7 @@ def get_pipeline(
     )
 
     step_process = ProcessingStep(
-        name="PreprocessAbaloneData",
+        name="PreprocessFraudData",
         step_args=step_args,        
     )
 
@@ -268,7 +268,7 @@ def get_pipeline(
     data_quality_check_config = DataQualityCheckConfig(
         baseline_dataset=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
         dataset_format=DatasetFormat.csv(header=False, output_columns_position="START"),
-        output_s3_uri=Join(on='/', values=['s3:/', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
+        output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
     )
 
     data_quality_check_step = QualityCheckStep(
@@ -298,7 +298,7 @@ def get_pipeline(
 
     data_bias_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3:/', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
+        s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
         label=0,
         dataset_type="text/csv",
         s3_analysis_config_output_path=data_bias_analysis_cfg_output_path,
@@ -323,7 +323,7 @@ def get_pipeline(
         model_package_group_name=model_package_group_name
     )
 
-    model_path = f"s3://{default_bucket}/{base_job_prefix}/AbaloneTrain"
+    model_path = f"s3://{default_bucket}/{base_job_prefix}/FraudTrain"
     image_uri = sagemaker.image_uris.retrieve(
         framework="xgboost",
         region=region,
@@ -337,13 +337,13 @@ def get_pipeline(
         instance_type=training_instance_type,
         instance_count=1,
         output_path=model_path,
-        base_job_name=f"{base_job_prefix}/abalone-train",
+        base_job_name=f"{base_job_prefix}/Fraud-train",
         sagemaker_session=pipeline_session,
         role=role,
     )
 
     xgb_train.set_hyperparameters(
-        objective="reg:linear",
+        objective="reg:squarederror",
         num_round=50,
         max_depth=5,
         eta=0.2,
@@ -371,7 +371,7 @@ def get_pipeline(
     )
 
     step_train = TrainingStep(
-        name="TrainAbaloneModel",
+        name="TrainFraudModel",
         step_args=step_args,
         depends_on=["DataQualityCheckStep", "DataBiasCheckStep"],
     )
@@ -389,7 +389,7 @@ def get_pipeline(
     )
 
     step_create_model = ModelStep(
-        name="AbaloneCreateModel",
+        name="FraudCreateModel",
         step_args=step_args,
     )
 
@@ -399,7 +399,7 @@ def get_pipeline(
         instance_count=1,
         accept="text/csv",
         assemble_with="Line",
-        output_path=f"s3://{default_bucket}/AbaloneTransform",
+        output_path=f"s3://{default_bucket}/FraudTransform",
         sagemaker_session=pipeline_session,
     )
 
@@ -420,7 +420,7 @@ def get_pipeline(
     )
 
     step_transform = TransformStep(
-        name="AbaloneTransform",
+        name="FraudTransform",
         step_args=step_args,
     )
 
@@ -435,7 +435,7 @@ def get_pipeline(
     model_quality_check_config = ModelQualityCheckConfig(
         baseline_dataset=step_transform.properties.TransformOutput.S3OutputPath,
         dataset_format=DatasetFormat.csv(header=False),
-        output_s3_uri=Join(on='/', values=['s3:/', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
+        output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='Regression',
         inference_attribute='_c0',
         ground_truth_attribute='_c1'
@@ -462,7 +462,7 @@ def get_pipeline(
 
     model_bias_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3:/', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelbiascheckstep']),
+        s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelbiascheckstep']),
         s3_analysis_config_output_path=model_bias_analysis_cfg_output_path,
         label=0,
         dataset_type="text/csv",
@@ -516,7 +516,7 @@ def get_pipeline(
 
     model_explainability_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3:/', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelexplainabilitycheckstep']),
+        s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelexplainabilitycheckstep']),
         s3_analysis_config_output_path=model_explainability_analysis_cfg_output_path,
         label=0,
         dataset_type="text/csv",
@@ -545,7 +545,7 @@ def get_pipeline(
         command=["python3"],
         instance_type=processing_instance_type,
         instance_count=1,
-        base_job_name=f"{base_job_prefix}/script-abalone-eval",
+        base_job_name=f"{base_job_prefix}/script-Fraud-eval",
         sagemaker_session=pipeline_session,
         role=role,
     )
@@ -568,12 +568,12 @@ def get_pipeline(
         code=os.path.join(BASE_DIR, "evaluate.py"),
     )
     evaluation_report = PropertyFile(
-        name="AbaloneEvaluationReport",
+        name="FraudEvaluationReport",
         output_name="evaluation",
         path="evaluation.json",
     )
     step_eval = ProcessingStep(
-        name="EvaluateAbaloneModel",
+        name="EvaluateFraudModel",
         step_args=step_args,
         property_files=[evaluation_report],
     )
@@ -692,7 +692,7 @@ def get_pipeline(
     )
 
     step_register = ModelStep(
-        name="RegisterAbaloneModel",
+        name="RegisterFraudModel",
         step_args=step_args,
     )
 
@@ -706,7 +706,7 @@ def get_pipeline(
         right=6.0,
     )
     step_cond = ConditionStep(
-        name="CheckMSEAbaloneEvaluation",
+        name="CheckMSEFraudEvaluation",
         conditions=[cond_lte],
         if_steps=[step_register],
         else_steps=[],

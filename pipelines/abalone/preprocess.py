@@ -1,4 +1,4 @@
-"""Feature engineers the abalone dataset."""
+"""Feature engineers the Fraud dataset."""
 import argparse
 import logging
 import os
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     key = "/".join(input_data.split("/")[3:])
 
     logger.info("Downloading data from bucket: %s, key: %s", bucket, key)
-    fn = f"{base_dir}/data/abalone-dataset.csv"
+    fn = f"s3://akshronix-frauddata/Chandan's Playground/Whole Fraud Dataframe.csv"
     s3 = boto3.resource("s3")
     s3.Bucket(bucket).download_file(key, fn)
 
