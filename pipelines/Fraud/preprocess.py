@@ -39,15 +39,15 @@ if __name__ == "__main__":
     logger.info("Downloading data from bucket: %s, key: %s", bucket, key)
     s3_path = f"{base_dir}/data/input.csv"
     s3 = boto3.resource("s3")
-    s3.Bucket(bucket).download_file(key, fn)
+    s3.Bucket(bucket).download_file(key, s3_path)
 
     logger.info("Reading downloaded data.")
-    df = pd.read_csv(fn)
+    df = pd.read_csv(s3_path)
 
     logger.info("First Row of Dataframe")
     print(df.head(1))
 
-    os.unlink(fn)
+    os.unlink(s3_path)
 
     logger.info("Splitting Main dataset for Training")
     main, stream_onhold = train_test_split(df, test_size=0.10, stratify=df["Is Fraudulent"], random_state=108)
