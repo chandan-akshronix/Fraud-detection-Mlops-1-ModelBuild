@@ -264,7 +264,7 @@ def get_pipeline(
     data_quality_check_config = DataQualityCheckConfig(
         baseline_dataset=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
         dataset_format=DatasetFormat.csv(header=False, output_columns_position="START"),
-        output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
+        output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
     )
 
     data_quality_check_step = QualityCheckStep(
@@ -294,7 +294,7 @@ def get_pipeline(
 
     data_bias_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
+        s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
         label="Is Fraudulent",
         headers=["onehot__Payment Method_bank transfer","onehot__Payment Method_credit card","onehot__Payment Method_debit card","onehot__Product Category_electronics","onehot__Product Category_health & beauty","onehot__Product Category_home & garden","onehot__Product Category_toys & games","onehot__Device Used_mobile","onehot__Device Used_tablet","onehot__Hour_Bin_Evening","onehot__Hour_Bin_Morning","onehot__Hour_Bin_Night","onehot__Age_Category_Elder","onehot__Age_Category_Invalid","onehot__Age_Category_Senior","onehot__Age_Category_Young","onehot__Age_Category_Young_Adult","onehot__Transaction_Size_Medium","onehot__Transaction_Size_Small","onehot__Transaction_Size_Very_Large","onehot__Transaction_Size_Very_Small","freq__Customer Location","freq__Location_Device","remainder__Transaction Amount","remainder__Quantity","remainder__Customer Age","remainder__Account Age Days","remainder__Transaction Hour","remainder__Amount_Log","remainder__Amount_zscore","remainder__Amount_per_Quantity","remainder__Is_Weekend","remainder__Day_of_Week","remainder__Month","remainder__Day_of_Year","remainder__Is_Month_Start","remainder__Is_Month_End","remainder__hour_sin","remainder__hour_cos","remainder__Unusual_Hour_Flag","remainder__weekday_sin","remainder__weekday_cos","remainder__month_sin","remainder__month_cos","remainder__Account_Age_Weeks","remainder__Is_New_Account","remainder__Quantity_Log","remainder__High_Quantity_Flag","remainder__Address_Match","remainder__Shipping Address Frequency","remainder__High_Amount_Flag","Is Fraudulent"],
         dataset_type="text/csv",
@@ -471,7 +471,7 @@ def get_pipeline(
 
     model_bias_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelbiascheckstep']),
+        s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelbiascheckstep']),
         s3_analysis_config_output_path=model_bias_analysis_cfg_output_path,
         label=0,
         dataset_type="text/csv",
@@ -525,7 +525,7 @@ def get_pipeline(
 
     model_explainability_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelexplainabilitycheckstep']),
+        s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelexplainabilitycheckstep']),
         s3_analysis_config_output_path=model_explainability_analysis_cfg_output_path,
         label=0,
         dataset_type="text/csv",
