@@ -193,7 +193,7 @@ def get_pipeline(
     )
     input_data = ParameterString(
         name="InputDataUrl",
-        default_value=f"s3://akshronix-frauddata/Chandan's Playground/Whole Fraud Dataframe.csv",
+        default_value=f"s3://akshronix-frauddata/Chandan's Playground MLOPS/Test 1/Whole Fraud Dataframe.csv",
     )
 
     # for data quality check step
