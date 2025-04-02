@@ -263,7 +263,7 @@ if __name__ == "__main__":
     logger.info("Writing out train, test, stream and onhold datasets to %s.", base_dir)
     process_train_set_with_pipeline.to_csv(f"{base_dir}/data/train.csv", index=False)
     process_test_set_with_pipeline.to_csv(f"{base_dir}/data/test.csv", index=False)
-    process_validation_set_with_pipeline.to_csv("{base_dir}/data/validation.csv", index=False)
+    process_validation_set_with_pipeline.to_csv(f"{base_dir}/data/validation.csv", index=False)
     stream.to_csv(f"{base_dir}/data/stream.csv", index=False)
     onhold.to_csv(f"{base_dir}/data/onhold.csv", index=False)
 
