@@ -81,6 +81,7 @@ from sagemaker.clarify import (
 from sagemaker.workflow.model_step import ModelStep
 
 from sagemaker.workflow.pipeline_context import PipelineSession
+from sagemaker.tuner import HyperparameterTuner, IntegerParameter, ContinuousParameter
 
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -225,28 +226,26 @@ def get_pipeline(
 
     # processing step for feature engineering
     sklearn_processor = SKLearnProcessor(
-        framework_version="0.23-1",
-        instance_type=processing_instance_type,
-        instance_count=processing_instance_count,
-        base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
-
+            framework_version="0.23-1",
+            instance_type=processing_instance_type,
+            instance_count=processing_instance_count,
+            base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
+            sagemaker_session=pipeline_session,
+            role=role,
+        )
     step_args = sklearn_processor.run(
-        outputs=[
-            ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
-            ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
-        ],
-        code=os.path.join(BASE_DIR, "preprocess.py"),
-        arguments=["--input-data", input_data],
-    )
-
+            outputs=[
+                ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
+                ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
+                ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
+            ],
+            code=os.path.join(BASE_DIR, "preprocess.py"),
+            arguments=["--input-data", input_data],
+        )
     step_process = ProcessingStep(
-        name="PreprocessFraudData",
-        step_args=step_args,        
-    )
+            name="PreprocessFraudData",
+            step_args=step_args,
+        )
 
     ### Calculating the Data Quality
 
@@ -323,43 +322,15 @@ def get_pipeline(
         model_package_group_name=model_package_group_name
     )
 
-    model_path = f"s3://{default_bucket}/{base_job_prefix}/FraudTrain"
     image_uri = sagemaker.image_uris.retrieve(
-        framework="xgboost",
-        region=region,
-        version="1.0-1",
-        py_version="py3",
-        instance_type=training_instance_type,
-    )
+            framework="xgboost",
+            region=region,
+            version="1.0-1",
+            py_version="py3",
+            instance_type=training_instance_type,
+        )
 
-    # Cross-validation training step
-    cv_processor = ScriptProcessor(
-        image_uri=image_uri,
-        command=["python3"],
-        instance_type=training_instance_type,
-        instance_count=1,
-        base_job_name=f"{base_job_prefix}/script-fraud-cv",
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
-
-    cv_step_args = cv_processor.run(
-        inputs=[
-            ProcessingInput(
-                source=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-                destination="/opt/ml/processing/train",
-            ),
-        ],
-        outputs=[
-            ProcessingOutput(output_name="cv_model", source="/opt/ml/processing/cv_model"),
-        ],
-        code=os.path.join(BASE_DIR, "train_cv.py"),
-    )
-    step_cv_train = ProcessingStep(
-        name="CrossValidateFraudModel",
-        step_args=cv_step_args,
-        depends_on=["DataQualityCheckStep", "DataBiasCheckStep"],
-    )
+    model_path = f"s3://{default_bucket}/{base_job_prefix}/FraudTrain"
 
     xgb_train = Estimator(
         image_uri=image_uri,
@@ -373,17 +344,34 @@ def get_pipeline(
 
     xgb_train.set_hyperparameters(
         objective="binary:logistic",
+        eval_metric="auc",
         num_round=50,
-        max_depth=5,
-        eta=0.2,
-        gamma=4,
-        min_child_weight=6,
-        subsample=0.7,
-        scale_pos_weight=1.0,  # Adjust based on class ratio
-        silent=0,
+        # Add other static hyperparameters if needed
     )
 
-    step_args = xgb_train.fit(
+    # Define hyperparameter ranges
+    hyperparameter_ranges = {
+        'max_depth': IntegerParameter(3, 10),
+        'eta': ContinuousParameter(0.01, 0.2),
+        'gamma': ContinuousParameter(0, 5),
+        'min_child_weight': IntegerParameter(1, 10),
+        'subsample': ContinuousParameter(0.5, 1.0),
+    }
+
+    # Define tuner
+    tuner = HyperparameterTuner(
+        estimator=xgb_train,
+        objective_metric_name='validation:auc',
+        hyperparameter_ranges=hyperparameter_ranges,
+        metric_definitions=[{'Name': 'validation:auc', 'Regex': 'validation-auc: ([0-9.]+)'}],
+        max_jobs=10,
+        max_parallel_jobs=3,
+    )
+
+    # Define tuning step
+    step_tune = TuningStep(
+        name="TuneFraudModel",
+        tuner=tuner,
         inputs={
             "train": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
@@ -395,15 +383,14 @@ def get_pipeline(
             ),
         },
     )
-    step_train = TrainingStep(
-        name="TrainFraudModel",
-        step_args=step_args,
-        depends_on=[step_cv_train.name],  # Depends on CV step
-    )
 
+    # Get best training job
+    best_training_job = step_tune.get_top_model_s3_uri(top_k=0, s3_bucket=default_bucket)
+
+    # Create model
     model = Model(
         image_uri=image_uri,
-        model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+        model_data=best_training_job,
         sagemaker_session=pipeline_session,
         role=role,
     )
@@ -412,7 +399,6 @@ def get_pipeline(
         instance_type="ml.m5.large",
         accelerator_type="ml.eia1.medium",
     )
-
     step_create_model = ModelStep(
         name="FraudCreateModel",
         step_args=step_args,
@@ -565,6 +551,7 @@ def get_pipeline(
         model_package_group_name=model_package_group_name
     )
 
+    # Evaluation step
     script_eval = ScriptProcessor(
         image_uri=image_uri,
         command=["python3"],
@@ -577,7 +564,7 @@ def get_pipeline(
     step_args = script_eval.run(
         inputs=[
             ProcessingInput(
-                source=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+                source=best_training_job,
                 destination="/opt/ml/processing/model",
             ),
             ProcessingInput(
@@ -590,7 +577,6 @@ def get_pipeline(
         ],
         code=os.path.join(BASE_DIR, "evaluate.py"),
     )
-
     evaluation_report = PropertyFile(
         name="FraudEvaluationReport",
         output_name="evaluation",
@@ -600,7 +586,6 @@ def get_pipeline(
         name="EvaluateFraudModel",
         step_args=step_args,
         property_files=[evaluation_report],
-        depends_on=[step_train.name],
     )
 
     model_metrics = ModelMetrics(
@@ -705,6 +690,7 @@ def get_pipeline(
         role=role,
     )
 
+    # Register model step
     step_args = model.register(
         content_types=["text/csv"],
         response_types=["text/csv"],
@@ -715,13 +701,12 @@ def get_pipeline(
         model_metrics=model_metrics,
         drift_check_baselines=drift_check_baselines,
     )
-
     step_register = ModelStep(
         name="RegisterFraudModel",
         step_args=step_args,
     )
 
-    # condition step for evaluating model quality and branching execution
+    # Condition step
     cond_lte = ConditionLessThanOrEqualTo(
         left=JsonGet(
             step_name=step_eval.name,
@@ -733,9 +718,8 @@ def get_pipeline(
     step_cond = ConditionStep(
         name="CheckF1FraudEvaluation",
         conditions=[cond_lte],
-        if_steps=[step_register],  # Assume registration step follows
+        if_steps=[step_register],
         else_steps=[],
-        depends_on=[step_eval.name],
     )
 
     # pipeline instance
@@ -770,7 +754,7 @@ def get_pipeline(
             register_new_baseline_model_explainability,
             supplied_baseline_constraints_model_explainability
         ],
-        steps=[step_process, data_quality_check_step, data_bias_check_step,step_cv_train, step_train, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
+        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
         sagemaker_session=pipeline_session,
     )
     return pipeline

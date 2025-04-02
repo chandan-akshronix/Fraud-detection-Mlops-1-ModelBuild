@@ -50,20 +50,34 @@ if __name__ == "__main__":
     os.unlink(fn)
 
     logger.info("Splitting Main dataset for Training")
-    main, stream = train_test_split(df, test_size=0.15, stratify=df["Is Fraudulent"], random_state=108)
-    print(main.shape)
+    main, stream_onhold = train_test_split(df, test_size=0.10, stratify=df["Is Fraudulent"], random_state=108)
+    print(f"Main Set shape {main.shape}")
+
+    logger.info("Splitting Main dataset into main_train, main_test_validation")
+    train, test_validation = train_test_split(main, test_size=0.30, stratify=main["Is Fraudulent"], random_state=108)
+    print(f"Train Set shape {train.shape}")
+
+    logger.info("Splitting Main dataset into main_train, main_test_validation")
+    test, validation = train_test_split(test_validation, test_size=0.50, stratify=test_validation["Is Fraudulent"], random_state=108)
+    print(f"Test Set shape {test.shape}")
+    print(f"Validation Set shape {validation.shape}")
 
     logger.info("Splitting stream and onHold set")
-    stream, onhold = train_test_split(stream, test_size=0.4, stratify=stream["Is Fraudulent"], random_state=108)
-    print(stream.shape)
-    print(onhold.shape)
+    stream, onhold = train_test_split(stream_onhold, test_size=0.3, stratify=stream_onhold["Is Fraudulent"], random_state=108)
+    print(f"Stream Set shape {stream.shape}")
+    print(f"Onhold Set shape {onhold.shape}")
 
     logger.info("splitting the Main dataset in X, y")
     
-    X = main.drop(["Is Fraudulent"],axis = 1)
-    y = main["Is Fraudulent"]
+    X_train = train.drop(["Is Fraudulent"],axis = 1)
+    y_train = train["Is Fraudulent"]
 
-    X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.18, stratify=y, random_state=108)
+    X_test = test.drop(["Is Fraudulent"],axis = 1)
+    y_test = test["Is Fraudulent"]
+
+    X_validation = validation.drop(["Is Fraudulent"],axis = 1)
+    y_validation = validation["Is Fraudulent"]
+
     
     class FrequencyEncoder(BaseEstimator, TransformerMixin):
         def __init__(self):
@@ -237,13 +251,19 @@ if __name__ == "__main__":
     logger.info("Fit and Transform X_test")
     X_test_transformed = preprocessing_pipeline.transform(X_test)
 
-    logger.info("Concatenating X and y for both train and test")
+    logger.info("Fit and Transform X_validation")
+    X_validation_transformed = preprocessing_pipeline.transform(X_validation)
+
+    logger.info("Concatenating X and y for both train, test and Validation")
     process_train_set_with_pipeline = pd.concat([X_train_transformed,y_train],axis=1)
     process_test_set_with_pipeline = pd.concat([X_test_transformed,y_test],axis=1)
+    process_validation_set_with_pipeline = pd.concat([X_validation_transformed,y_validation],axis=1)
+
 
     logger.info("Writing out train, test, stream and onhold datasets to %s.", base_dir)
     process_train_set_with_pipeline.to_csv(f"{base_dir}/data/train.csv", index=False)
     process_test_set_with_pipeline.to_csv(f"{base_dir}/data/test.csv", index=False)
+    process_validation_set_with_pipeline.to_csv("{base_dir}/data/validation.csv", index=False)
     stream.to_csv(f"{base_dir}/data/stream.csv", index=False)
     onhold.to_csv(f"{base_dir}/data/onhold.csv", index=False)
 
