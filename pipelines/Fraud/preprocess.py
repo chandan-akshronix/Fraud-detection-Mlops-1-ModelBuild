@@ -6,6 +6,7 @@ import pathlib
 import requests
 import tempfile
 import pickle
+import tarfile
 
 import boto3
 import numpy as np
@@ -267,6 +268,24 @@ if __name__ == "__main__":
     stream.to_csv(f"{base_dir}/data/stream.csv", index=False)
     onhold.to_csv(f"{base_dir}/data/onhold.csv", index=False)
 
+    # Ensure the artifacts directory exists
+    artifacts_dir = os.path.join(base_dir, "artifacts")
+    pathlib.Path(artifacts_dir).mkdir(parents=True, exist_ok=True)
+
+    # Export the preprocessor.pkl file
     logger.info("Exporting preprocessor.pkl file")
-    with open(f"{base_dir}/artifacts/preprocessor.pkl", "wb") as f:
+    with open(os.path.join(artifacts_dir, "preprocessor.pkl"), "wb") as f:
         pickle.dump(preprocessing_pipeline, f)
+    logger.info("preprocessor.pkl file saved successfully.")
+
+    # Package the preprocessor.pkl into a tar.gz archive
+    model_tar = os.path.join(artifacts_dir, "model.tar.gz")
+    preprocessor_path = os.path.join(artifacts_dir, "preprocessor.pkl")
+    
+    if os.path.exists(preprocessor_path):
+        with tarfile.open(model_tar, "w:gz") as tar:
+            tar.add(preprocessor_path, arcname="preprocessor.pkl")
+        logger.info(f"Packaged preprocessor.pkl into {model_tar}")
+    else:
+        logger.error(f"preprocessor.pkl does not exist at {preprocessor_path}")
+        raise FileNotFoundError(f"preprocessor.pkl not found at {preprocessor_path}")
