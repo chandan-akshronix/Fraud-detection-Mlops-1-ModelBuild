@@ -461,9 +461,9 @@ def get_pipeline(
         baseline_dataset=step_transform.properties.TransformOutput.S3OutputPath,
         dataset_format=DatasetFormat.csv(header=False),
         output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
-        problem_type='Regression',
-        inference_attribute='_c0',
-        ground_truth_attribute='_c1'
+        problem_type='BinaryClassification',
+        probability_attribute='_c0',  # Predicted probability
+        ground_truth_attribute='_c1'  # Actual label
     )
 
     model_quality_check_step = QualityCheckStep(
@@ -600,6 +600,7 @@ def get_pipeline(
         name="EvaluateFraudModel",
         step_args=step_args,
         property_files=[evaluation_report],
+        depends_on=[step_train.name],
     )
 
     model_metrics = ModelMetrics(
@@ -734,6 +735,7 @@ def get_pipeline(
         conditions=[cond_lte],
         if_steps=[step_register],  # Assume registration step follows
         else_steps=[],
+        depends_on=[step_eval.name],
     )
 
     # pipeline instance
@@ -768,7 +770,7 @@ def get_pipeline(
             register_new_baseline_model_explainability,
             supplied_baseline_constraints_model_explainability
         ],
-        steps=[step_process, data_quality_check_step, data_bias_check_step, step_train, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
+        steps=[step_process, data_quality_check_step, data_bias_check_step,step_cv_train, step_train, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
         sagemaker_session=pipeline_session,
     )
     return pipeline
