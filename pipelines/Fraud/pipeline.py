@@ -49,7 +49,8 @@ from sagemaker.workflow.steps import (
     ProcessingStep,
     TrainingStep,
     CreateModelStep,
-    TransformStep
+    TransformStep,
+    TuningStep,
 )
 from sagemaker.workflow.step_collections import RegisterModel
 from sagemaker.workflow.check_job_config import CheckJobConfig
