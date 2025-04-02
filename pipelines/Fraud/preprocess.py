@@ -67,7 +67,7 @@ if __name__ == "__main__":
     print(f"Stream Set shape {stream.shape}")
     print(f"Onhold Set shape {onhold.shape}")
 
-    logger.info("splitting the Main dataset in X, y")
+    logger.info("splitting the Main dataset in X and y versions of Train, Test and Validation ")
     
     X_train = train.drop(["Is Fraudulent"],axis = 1)
     y_train = train["Is Fraudulent"]
@@ -223,7 +223,7 @@ if __name__ == "__main__":
         # Encoding transformer
         encoding_transformer = ColumnTransformer(
             transformers=[
-                ('onehot', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'), 
+                ('onehot', OneHotEncoder(drop='first', sparse=False, handle_unknown='ignore'), 
                  low_cardinality_cols),
                 ('freq', FrequencyEncoder(), high_cardinality_cols)
             ],
