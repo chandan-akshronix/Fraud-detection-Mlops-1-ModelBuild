@@ -1,14 +1,10 @@
-"""Example workflow pipeline script for Fraud pipeline.
-                                                                                 . -ModelStep
-                                                                                .
-    Process-> DataQualityCheck/DataBiasCheck -> Train -> Evaluate -> Condition .
-                                                  |                              .
-                                                  |                                . -(stop)
-                                                  |
-                                                   -> CreateModel-> ModelBiasCheck/ModelExplainabilityCheck
-                                                           |
-                                                           |
-                                                            -> BatchTransform(for now) -> ModelQualityCheck
+"""Process -> DataQualityCheck/DataBiasCheck -> Tune -> Evaluate -> Condition
+                                                 |
+                                                 v
+                                      CreateModel -> ModelBiasCheck/ModelExplainabilityCheck
+                                                 |
+                                                 v
+                                       BatchTransform -> ModelQualityCheck
 
 Implements a get_pipeline(**kwargs) method.
 """
@@ -298,14 +294,15 @@ def get_pipeline(
     data_bias_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
         s3_output_path=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
-        label=0,
+        label="Is Fraudulent",
+        headers=["onehot__Payment Method_bank transfer","onehot__Payment Method_credit card","onehot__Payment Method_debit card","onehot__Product Category_electronics","onehot__Product Category_health & beauty","onehot__Product Category_home & garden","onehot__Product Category_toys & games","onehot__Device Used_mobile","onehot__Device Used_tablet","onehot__Hour_Bin_Evening","onehot__Hour_Bin_Morning","onehot__Hour_Bin_Night","onehot__Age_Category_Elder","onehot__Age_Category_Invalid","onehot__Age_Category_Senior","onehot__Age_Category_Young","onehot__Age_Category_Young_Adult","onehot__Transaction_Size_Medium","onehot__Transaction_Size_Small","onehot__Transaction_Size_Very_Large","onehot__Transaction_Size_Very_Small","freq__Customer Location","freq__Location_Device","remainder__Transaction Amount","remainder__Quantity","remainder__Customer Age","remainder__Account Age Days","remainder__Transaction Hour","remainder__Amount_Log","remainder__Amount_zscore","remainder__Amount_per_Quantity","remainder__Is_Weekend","remainder__Day_of_Week","remainder__Month","remainder__Day_of_Year","remainder__Is_Month_Start","remainder__Is_Month_End","remainder__hour_sin","remainder__hour_cos","remainder__Unusual_Hour_Flag","remainder__weekday_sin","remainder__weekday_cos","remainder__month_sin","remainder__month_cos","remainder__Account_Age_Weeks","remainder__Is_New_Account","remainder__Quantity_Log","remainder__High_Quantity_Flag","remainder__Address_Match","remainder__Shipping Address Frequency","remainder__High_Amount_Flag","Is Fraudulent"],
         dataset_type="text/csv",
         s3_analysis_config_output_path=data_bias_analysis_cfg_output_path,
     )
 
     # We are using this bias config to configure clarify to detect bias based on the first feature in the featurized vector for Sex
     data_bias_config = BiasConfig(
-        label_values_or_threshold=[15.0], facet_name=[8], facet_values_or_threshold=[[0.5]]
+        label_values_or_threshold=[1], facet_name=['remainder__Customer Age'], facet_values_or_threshold=[[80]]
     )
 
     data_bias_check_config = DataBiasCheckConfig(
@@ -423,7 +420,7 @@ def get_pipeline(
 
     step_args = transformer.transform(
         data=transform_inputs.data,
-        input_filter="$[1:]",
+        input_filter="$[0:-1]",
         join_source="Input",
         output_filter="$[0,-1]",
         content_type="text/csv",
@@ -485,9 +482,9 @@ def get_pipeline(
         instance_type='ml.m5.large',
     )
 
-    # We are using this bias config to configure clarify to detect bias based on the first feature in the featurized vector for Sex
+    # We are using this bias config to configure clarify to detect bias based on the first feature in the featurized vector
     model_bias_config = BiasConfig(
-        label_values_or_threshold=[15.0], facet_name=[8], facet_values_or_threshold=[[0.5]]
+        label_values_or_threshold=[1], facet_name=['remainder__Customer Age'], facet_values_or_threshold=[[80]]
     )
 
     model_bias_check_config = ModelBiasCheckConfig(
@@ -685,7 +682,7 @@ def get_pipeline(
 
     model = Model(
         image_uri=image_uri,
-        model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+        model_data=best_training_job,
         sagemaker_session=pipeline_session,
         role=role,
     )
@@ -706,8 +703,8 @@ def get_pipeline(
         step_args=step_args,
     )
 
-    # Condition step
-    cond_lte = ConditionLessThanOrEqualTo(
+    # Replace the condition
+    cond_gte = ConditionGreaterThanOrEqualTo(
         left=JsonGet(
             step_name=step_eval.name,
             property_file=evaluation_report,
@@ -715,9 +712,10 @@ def get_pipeline(
         ),
         right=0.6,
     )
+
     step_cond = ConditionStep(
         name="CheckF1FraudEvaluation",
-        conditions=[cond_lte],
+        conditions=[cond_gte],
         if_steps=[step_register],
         else_steps=[],
     )

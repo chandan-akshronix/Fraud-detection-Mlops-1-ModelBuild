@@ -26,11 +26,11 @@ if __name__ == "__main__":
 
     logger.debug("Reading test data.")
     test_path = "/opt/ml/processing/test/test.csv"
-    df = pd.read_csv(test_path, header=None)
+    df = pd.read_csv(test_path)
 
     logger.debug("Preparing test data.")
-    y_test = df.iloc[:, 0].to_numpy()
-    df.drop(df.columns[0], axis=1, inplace=True)
+    y_test = df['Is Fraudulent'].to_numpy()
+    df.drop('Is Fraudulent', axis=1, inplace=True)
     X_test = xgboost.DMatrix(df.values)
 
     logger.info("Performing predictions against test data.")
