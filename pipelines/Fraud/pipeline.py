@@ -332,6 +332,35 @@ def get_pipeline(
         instance_type=training_instance_type,
     )
 
+    # Cross-validation training step
+    cv_processor = ScriptProcessor(
+        image_uri=image_uri,
+        command=["python3"],
+        instance_type=training_instance_type,
+        instance_count=1,
+        base_job_name=f"{base_job_prefix}/script-fraud-cv",
+        sagemaker_session=pipeline_session,
+        role=role,
+    )
+
+    cv_step_args = cv_processor.run(
+        inputs=[
+            ProcessingInput(
+                source=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
+                destination="/opt/ml/processing/train",
+            ),
+        ],
+        outputs=[
+            ProcessingOutput(output_name="cv_model", source="/opt/ml/processing/cv_model"),
+        ],
+        code=os.path.join(BASE_DIR, "train_cv.py"),
+    )
+    step_cv_train = ProcessingStep(
+        name="CrossValidateFraudModel",
+        step_args=cv_step_args,
+        depends_on=["DataQualityCheckStep", "DataBiasCheckStep"],
+    )
+
     xgb_train = Estimator(
         image_uri=image_uri,
         instance_type=training_instance_type,
@@ -343,37 +372,33 @@ def get_pipeline(
     )
 
     xgb_train.set_hyperparameters(
-        objective="reg:squarederror",
+        objective="binary:logistic",
         num_round=50,
         max_depth=5,
         eta=0.2,
         gamma=4,
         min_child_weight=6,
         subsample=0.7,
+        scale_pos_weight=1.0,  # Adjust based on class ratio
         silent=0,
     )
 
     step_args = xgb_train.fit(
         inputs={
             "train": TrainingInput(
-                s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
-                    "train"
-                ].S3Output.S3Uri,
+                s3_data=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
                 content_type="text/csv",
             ),
             "validation": TrainingInput(
-                s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
-                    "validation"
-                ].S3Output.S3Uri,
+                s3_data=step_process.properties.ProcessingOutputConfig.Outputs["validation"].S3Output.S3Uri,
                 content_type="text/csv",
             ),
         },
     )
-
     step_train = TrainingStep(
         name="TrainFraudModel",
         step_args=step_args,
-        depends_on=["DataQualityCheckStep", "DataBiasCheckStep"],
+        depends_on=[step_cv_train.name],  # Depends on CV step
     )
 
     model = Model(
@@ -556,9 +581,7 @@ def get_pipeline(
                 destination="/opt/ml/processing/model",
             ),
             ProcessingInput(
-                source=step_process.properties.ProcessingOutputConfig.Outputs[
-                    "test"
-                ].S3Output.S3Uri,
+                source=step_process.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
                 destination="/opt/ml/processing/test",
             ),
         ],
@@ -567,6 +590,7 @@ def get_pipeline(
         ],
         code=os.path.join(BASE_DIR, "evaluate.py"),
     )
+
     evaluation_report = PropertyFile(
         name="FraudEvaluationReport",
         output_name="evaluation",
@@ -701,14 +725,14 @@ def get_pipeline(
         left=JsonGet(
             step_name=step_eval.name,
             property_file=evaluation_report,
-            json_path="regression_metrics.mse.value"
+            json_path="classification_metrics.f1_score.value"
         ),
-        right=6.0,
+        right=0.6,
     )
     step_cond = ConditionStep(
-        name="CheckMSEFraudEvaluation",
+        name="CheckF1FraudEvaluation",
         conditions=[cond_lte],
-        if_steps=[step_register],
+        if_steps=[step_register],  # Assume registration step follows
         else_steps=[],
     )
 
