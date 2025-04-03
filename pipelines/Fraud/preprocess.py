@@ -36,7 +36,9 @@ if __name__ == "__main__":
     pathlib.Path(f"{base_dir}/train").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/validation").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/test").mkdir(parents=True, exist_ok=True)
-    pathlib.Path(f"{base_dir}/data").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f"{base_dir}/stream").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f"{base_dir}/onhold").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f"{base_dir}/artifacts").mkdir(parents=True, exist_ok=True)
 
     input_data = args.input_data
     bucket = input_data.split("/")[2]
@@ -266,31 +268,43 @@ if __name__ == "__main__":
     process_validation_set_with_pipeline = pd.concat([y_validation, X_validation_transformed],axis=1)
 
 
-    logger.info("Writing out train, test, stream and onhold datasets to %s.", base_dir)
+    # Write CSV files
     process_train_set_with_pipeline.to_csv(f"{base_dir}/train/train.csv", index=False)
+    logger.info("Train dataset written to %s/train/train.csv", base_dir)
     process_test_set_with_pipeline.to_csv(f"{base_dir}/test/test.csv", index=False)
+    logger.info("Test dataset written to %s/test/test.csv", base_dir)
     process_validation_set_with_pipeline.to_csv(f"{base_dir}/validation/validation.csv", index=False)
-    stream.to_csv(f"{base_dir}/data/stream.csv", index=False)
-    onhold.to_csv(f"{base_dir}/data/onhold.csv", index=False)
+    logger.info("Validation dataset written to %s/validation/validation.csv", base_dir)
+    stream.to_csv(f"{base_dir}/stream/stream.csv", index=False)
+    logger.info("Stream dataset written to %s/stream/stream.csv", base_dir)
+    onhold.to_csv(f"{base_dir}/onhold/onhold.csv", index=False)
+    logger.info("Onhold dataset written to %s/onhold/onhold.csv", base_dir)
 
     # Ensure the artifacts directory exists
     artifacts_dir = os.path.join(base_dir, "artifacts")
     pathlib.Path(artifacts_dir).mkdir(parents=True, exist_ok=True)
+    logger.info("Artifacts directory created at %s", artifacts_dir)
 
     # Export the preprocessor.pkl file
     logger.info("Exporting preprocessor.pkl file")
-    with open(os.path.join(artifacts_dir, "preprocessor.pkl"), "wb") as f:
+    preprocessor_path = os.path.join(artifacts_dir, "preprocessor.pkl")
+    with open(preprocessor_path, "wb") as f:
         pickle.dump(preprocessing_pipeline, f)
-    logger.info("preprocessor.pkl file saved successfully.")
+    logger.info("preprocessor.pkl file saved successfully to %s", preprocessor_path)
 
     # Package the preprocessor.pkl into a tar.gz archive
     model_tar = os.path.join(artifacts_dir, "preprocess.tar.gz")
-    preprocessor_path = os.path.join(artifacts_dir, "preprocessor.pkl")
-    
     if os.path.exists(preprocessor_path):
         with tarfile.open(model_tar, "w:gz") as tar:
             tar.add(preprocessor_path, arcname="preprocessor.pkl")
-        logger.info(f"Packaged preprocessor.pkl into {model_tar}")
+        logger.info("Packaged preprocessor.pkl into %s", model_tar)
     else:
-        logger.error(f"preprocessor.pkl does not exist at {preprocessor_path}")
+        logger.error("preprocessor.pkl does not exist at %s", preprocessor_path)
         raise FileNotFoundError(f"preprocessor.pkl not found at {preprocessor_path}")
+
+    # Verify tar file creation
+    if os.path.exists(model_tar):
+        logger.info("Tar file %s created successfully with size %d bytes", model_tar, os.path.getsize(model_tar))
+    else:
+        logger.error("Failed to create tar file at %s", model_tar)
+        raise FileNotFoundError(f"Tar file not created at {model_tar}")
