@@ -395,9 +395,9 @@ def get_pipeline(
 
     step_args = transformer.transform(
         data=transform_inputs.data,
-        input_filter="$[0:-1]", # Exclude the last column (Is Fraudulent)
+        input_filter="$[1: ]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$.['label', 'features']", # Output prediction and label
+        output_filter="$.[0:]", # Prediction + all features ## Why $[0:] as it keeps the full output, which is already correct since input_filter excludes Is Fraudulent.
         content_type="text/csv",
         split_type="Line",
     )
@@ -420,8 +420,8 @@ def get_pipeline(
         dataset_format=DatasetFormat.csv(header=True),
         output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='BinaryClassification',
-        probability_attribute='label',  # Predicted probability
-        ground_truth_attribute='features'  # Actual label
+        probability_attribute='0',  # Predicted probability or Prediction (first column)
+        ground_truth_attribute='features'  # Actual label or Should be actual label, but excluded; adjust logic
     )
 
     model_quality_check_step = QualityCheckStep(
