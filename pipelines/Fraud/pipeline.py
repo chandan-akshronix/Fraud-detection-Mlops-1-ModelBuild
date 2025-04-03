@@ -374,6 +374,7 @@ def get_pipeline(
     step_create_model = ModelStep(
         name="FraudCreateModel",
         step_args=step_args,
+        depends_on=["TuneFraudModel"],
     )
 
     transformer = Transformer(
@@ -395,9 +396,9 @@ def get_pipeline(
 
     step_args = transformer.transform(
         data=transform_inputs.data,
-        input_filter="$[1: ]", # Exclude Is Fraudulent (first column)
+        input_filter="$[1:]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$.[0:]", # Prediction + all features ## Why $[0:] as it keeps the full output, which is already correct since input_filter excludes Is Fraudulent.
+        output_filter="$[0, -1]", # Prediction + Is Fraudulent
         content_type="text/csv",
         split_type="Line",
     )
@@ -405,6 +406,7 @@ def get_pipeline(
     step_transform = TransformStep(
         name="FraudTransform",
         step_args=step_args,
+        depends_on=["FraudCreateModel"]
     )
 
     ### Check the Model Quality
@@ -418,10 +420,10 @@ def get_pipeline(
     model_quality_check_config = ModelQualityCheckConfig(
         baseline_dataset=step_transform.properties.TransformOutput.S3OutputPath,
         dataset_format=DatasetFormat.csv(header=True),
-        output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
+        output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='BinaryClassification',
         probability_attribute='0',  # Predicted probability or Prediction (first column)
-        ground_truth_attribute='features'  # Actual label or Should be actual label, but excluded; adjust logic
+        ground_truth_attribute='1'  # Is Fraudulent index
     )
 
     model_quality_check_step = QualityCheckStep(
@@ -432,7 +434,8 @@ def get_pipeline(
         check_job_config=check_job_config,
         supplied_baseline_statistics=supplied_baseline_statistics_model_quality,
         supplied_baseline_constraints=supplied_baseline_constraints_model_quality,
-        model_package_group_name=model_package_group_name
+        model_package_group_name=model_package_group_name,
+        depends_on=["FraudTransform"],
     )
 
     ### Check for Model Bias
