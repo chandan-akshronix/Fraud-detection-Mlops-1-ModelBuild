@@ -38,6 +38,7 @@ if __name__ == "__main__":
     pathlib.Path(f"{base_dir}/test").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/stream").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/onhold").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f"{base_dir}/data").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/artifacts").mkdir(parents=True, exist_ok=True)
 
     input_data = args.input_data
@@ -284,7 +285,7 @@ if __name__ == "__main__":
     artifacts_dir = os.path.join(base_dir, "artifacts")
     pathlib.Path(artifacts_dir).mkdir(parents=True, exist_ok=True)
     logger.info("Artifacts directory created at %s", artifacts_dir)
-    
+
     # Clear any existing preprocess.tar.gz to avoid directory conflict
     model_tar = os.path.join(artifacts_dir, "preprocess.tar.gz")
     if os.path.exists(model_tar):
@@ -293,14 +294,14 @@ if __name__ == "__main__":
         else:
             os.remove(model_tar)  # Remove if it’s a file
         logger.info("Cleared existing %s", model_tar)
-    
+
     # Export the preprocessor.pkl file
     logger.info("Exporting preprocessor.pkl file")
     preprocessor_path = os.path.join(artifacts_dir, "preprocessor.pkl")
     with open(preprocessor_path, "wb") as f:
         pickle.dump(preprocessing_pipeline, f)
     logger.info("preprocessor.pkl file saved successfully to %s", preprocessor_path)
-    
+
     # Package the preprocessor.pkl into a tar.gz archive
     if os.path.exists(preprocessor_path):
         with tarfile.open(model_tar, "w:gz") as tar:
@@ -309,7 +310,7 @@ if __name__ == "__main__":
     else:
         logger.error("preprocessor.pkl does not exist at %s", preprocessor_path)
         raise FileNotFoundError(f"preprocessor.pkl not found at {preprocessor_path}")
-    
+
     # Verify tar file creation
     if os.path.exists(model_tar):
         logger.info("Tar file %s created successfully with size %d bytes", model_tar, os.path.getsize(model_tar))
