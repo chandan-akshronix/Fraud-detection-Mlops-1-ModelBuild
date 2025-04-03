@@ -261,9 +261,9 @@ if __name__ == "__main__":
     X_validation_transformed = preprocessing_pipeline.transform(X_validation)
 
     logger.info("Concatenating X and y for both train, test and Validation")
-    process_train_set_with_pipeline = pd.concat([X_train_transformed,y_train],axis=1)
-    process_test_set_with_pipeline = pd.concat([X_test_transformed,y_test],axis=1)
-    process_validation_set_with_pipeline = pd.concat([X_validation_transformed,y_validation],axis=1)
+    process_train_set_with_pipeline = pd.concat([y_train, X_train_transformed],axis=1)
+    process_test_set_with_pipeline = pd.concat([y_test, X_test_transformed],axis=1)
+    process_validation_set_with_pipeline = pd.concat([y_validation, X_validation_transformed],axis=1)
 
 
     logger.info("Writing out train, test, stream and onhold datasets to %s.", base_dir)

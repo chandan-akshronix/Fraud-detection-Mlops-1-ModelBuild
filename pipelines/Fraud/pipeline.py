@@ -350,6 +350,7 @@ def get_pipeline(
                 content_type="text/csv",
             ),
         },
+        depends_on=["DataQualityCheckStep", "DataBiasCheckStep"]
     )
 
     # Get best training job
@@ -549,6 +550,7 @@ def get_pipeline(
         name="EvaluateFraudModel",
         step_args=step_args,
         property_files=[evaluation_report],
+        depends_on=[step_tune.name]
     )
 
     model_metrics = ModelMetrics(
@@ -677,6 +679,7 @@ def get_pipeline(
         conditions=[cond_gte],
         if_steps=[step_register],
         else_steps=[],
+        depends_on=[step_eval.name]
     )
 
     # pipeline instance
