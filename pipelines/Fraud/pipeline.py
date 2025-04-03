@@ -199,17 +199,17 @@ def get_pipeline(
             role=role,
         )
     step_args = sklearn_processor.run(
-        outputs=[
-            ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
-            ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
-            ProcessingOutput(output_name="stream", source="/opt/ml/processing/stream"),
-            ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),  
-            ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
-        ],
-        code=os.path.join(BASE_DIR, "preprocess.py"),
-        arguments=["--input-data", input_data],
-    )
+            outputs=[
+                ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
+                ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
+                ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
+                ProcessingOutput(output_name="stream", source="/opt/ml/processing/stream"),
+                ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),  
+                ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
+            ],
+            code=os.path.join(BASE_DIR, "preprocess.py"),
+            arguments=["--input-data", input_data],
+        )
     step_process = ProcessingStep(
             name="PreprocessFraudData",
             step_args=step_args,
