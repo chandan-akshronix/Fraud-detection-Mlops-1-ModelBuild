@@ -367,35 +367,6 @@ def get_pipeline(
         role=role,
     )
 
-    #process for headerless test.csv
-
-    sklearn_processor_strip = SKLearnProcessor(
-        framework_version="0.23-1",
-        instance_type=processing_instance_type,
-        instance_count=1,
-        base_job_name=f"{base_job_prefix}/strip-headers",
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
-
-    step_args_strip = sklearn_processor_strip.run(
-        inputs=[ProcessingInput(
-            source=step_process.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
-            destination="/opt/ml/processing/input",
-        )],
-        outputs=[ProcessingOutput(
-            output_name="test_no_headers",
-            source="/opt/ml/processing/output",
-            destination=Join(on="/", values=["s3://" + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, "test_no_headers"]),
-        )],
-        code=os.path.join(BASE_DIR, "strip_headers.py"),
-    )
-
-    step_strip_headers = ProcessingStep(
-        name="StripHeaders",
-        step_args=step_args_strip,
-    )
-
     step_args = model.create(
         instance_type="ml.m5.large",
         accelerator_type="ml.eia1.medium",
@@ -403,7 +374,7 @@ def get_pipeline(
     step_create_model = ModelStep(
         name="FraudCreateModel",
         step_args=step_args,
-        depends_on=["TuneFraudModel", "step"],
+        depends_on=["TuneFraudModel"],
     )
 
     transformer = Transformer(
@@ -420,14 +391,14 @@ def get_pipeline(
     # The output format is `prediction, original label`
 
     transform_inputs = TransformInput(
-        data=step_process.properties.ProcessingOutputConfig.Outputs["test_no_headers"].S3Output.S3Uri,
+        data=step_process.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
     )
 
     step_args = transformer.transform(
         data=transform_inputs.data,
         input_filter="$[1:]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$[0, 0]", # Prediction + Is Fraudulent
+        output_filter="$[0,0]", # Prediction + all features ## Why $[0:] as it keeps the full output, which is already correct since input_filter excludes Is Fraudulent.
         content_type="text/csv",
         split_type="Line",
     )
@@ -435,7 +406,7 @@ def get_pipeline(
     step_transform = TransformStep(
         name="FraudTransform",
         step_args=step_args,
-        depends_on=["FraudCreateModel", "StripHeaders"]
+        depends_on=["FraudCreateModel"]
     )
 
     ### Check the Model Quality
@@ -449,10 +420,10 @@ def get_pipeline(
     model_quality_check_config = ModelQualityCheckConfig(
         baseline_dataset=step_transform.properties.TransformOutput.S3OutputPath,
         dataset_format=DatasetFormat.csv(header=True),
-        output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
+        output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='BinaryClassification',
         probability_attribute='0',  # Predicted probability or Prediction (first column)
-        ground_truth_attribute='1'  # Is Fraudulent index
+        ground_truth_attribute='features'  # Actual label or Should be actual label, but excluded; adjust logic
     )
 
     model_quality_check_step = QualityCheckStep(
@@ -463,8 +434,7 @@ def get_pipeline(
         check_job_config=check_job_config,
         supplied_baseline_statistics=supplied_baseline_statistics_model_quality,
         supplied_baseline_constraints=supplied_baseline_constraints_model_quality,
-        model_package_group_name=model_package_group_name,
-        depends_on=["FraudTransform"],
+        model_package_group_name=model_package_group_name
     )
 
     ### Check for Model Bias
@@ -749,7 +719,7 @@ def get_pipeline(
             register_new_baseline_model_explainability,
             supplied_baseline_constraints_model_explainability
         ],
-        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_strip_headers, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
+        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
         sagemaker_session=pipeline_session,
     )
     return pipeline
