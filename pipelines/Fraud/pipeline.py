@@ -403,7 +403,7 @@ def get_pipeline(
     step_create_model = ModelStep(
         name="FraudCreateModel",
         step_args=step_args,
-        depends_on=["TuneFraudModel"],
+        depends_on=["TuneFraudModel", "step"],
     )
 
     transformer = Transformer(
@@ -435,7 +435,7 @@ def get_pipeline(
     step_transform = TransformStep(
         name="FraudTransform",
         step_args=step_args,
-        depends_on=["FraudCreateModel"]
+        depends_on=["FraudCreateModel", "StripHeaders"]
     )
 
     ### Check the Model Quality
