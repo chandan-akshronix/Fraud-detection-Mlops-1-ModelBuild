@@ -31,11 +31,13 @@ if __name__ == "__main__":
     parser.add_argument("--input-data", type=str, required=True)
     args = parser.parse_args()
 
-    base_dir = "/opt/ml/processing/"
+    base_dir = "/opt/ml/processing"
+    # Create directories for train, validation, test outputs
     pathlib.Path(f"{base_dir}/train").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/validation").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/test").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{base_dir}/data").mkdir(parents=True, exist_ok=True)
+
     input_data = args.input_data
     bucket = input_data.split("/")[2]
     key = "/".join(input_data.split("/")[3:])
@@ -71,15 +73,15 @@ if __name__ == "__main__":
     print(f"Stream Set shape {stream.shape}")
     print(f"Onhold Set shape {onhold.shape}")
 
-    logger.info("splitting the Main dataset in X and y versions of Train, Test and Validation ")
+    logger.info("Splitting the Main dataset in X and y versions of Train, Test and Validation")
     
-    X_train = train.drop(["Is Fraudulent"],axis = 1)
+    X_train = train.drop(["Is Fraudulent"], axis=1)
     y_train = train["Is Fraudulent"]
 
-    X_test = test.drop(["Is Fraudulent"],axis = 1)
+    X_test = test.drop(["Is Fraudulent"], axis=1)
     y_test = test["Is Fraudulent"]
 
-    X_validation = validation.drop(["Is Fraudulent"],axis = 1)
+    X_validation = validation.drop(["Is Fraudulent"], axis=1)
     y_validation = validation["Is Fraudulent"]
 
     

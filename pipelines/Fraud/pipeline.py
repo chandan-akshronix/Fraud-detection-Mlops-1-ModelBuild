@@ -19,62 +19,31 @@ from sagemaker.inputs import TrainingInput, CreateModelInput, TransformInput
 from sagemaker.model import Model
 from sagemaker.transformer import Transformer
 
-from sagemaker.model_metrics import (
-    MetricsSource,
-    ModelMetrics,
-    FileSource
-)
+from sagemaker.model_metrics import MetricsSource, ModelMetrics, FileSource
 from sagemaker.drift_check_baselines import DriftCheckBaselines
-from sagemaker.processing import (
-    ProcessingInput,
-    ProcessingOutput,
-    ScriptProcessor,
-)
+from sagemaker.processing import ProcessingInput,ProcessingOutput, ScriptProcessor
 from sagemaker.sklearn.processing import SKLearnProcessor
 from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo
-from sagemaker.workflow.condition_step import (
-    ConditionStep,
-)
-from sagemaker.workflow.functions import (
-    JsonGet,
-)
-from sagemaker.workflow.parameters import (
-    ParameterBoolean,
-    ParameterInteger,
-    ParameterString,
-)
+from sagemaker.workflow.condition_step import ConditionStep
+from sagemaker.workflow.functions import JsonGet
+
+from sagemaker.workflow.parameters import ParameterBoolean, ParameterInteger, ParameterString
+
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.properties import PropertyFile
-from sagemaker.workflow.steps import (
-    ProcessingStep,
-    TrainingStep,
-    CreateModelStep,
-    TransformStep,
-    TuningStep,
-)
+from sagemaker.workflow.steps import ProcessingStep, TrainingStep, CreateModelStep, TransformStep, TuningStep
+
 from sagemaker.workflow.step_collections import RegisterModel
 from sagemaker.workflow.check_job_config import CheckJobConfig
-from sagemaker.workflow.clarify_check_step import (
-    DataBiasCheckConfig,
-    ClarifyCheckStep,
-    ModelBiasCheckConfig,
-    ModelPredictedLabelConfig,
-    ModelExplainabilityCheckConfig,
-    SHAPConfig
-)
-from sagemaker.workflow.quality_check_step import (
-    DataQualityCheckConfig,
-    ModelQualityCheckConfig,
-    QualityCheckStep,
-)
+from sagemaker.workflow.clarify_check_step import DataBiasCheckConfig, ClarifyCheckStep, ModelBiasCheckConfig, ModelPredictedLabelConfig, ModelExplainabilityCheckConfig, SHAPConfig
+
+from sagemaker.workflow.quality_check_step import DataQualityCheckConfig, ModelQualityCheckConfig, QualityCheckStep
+
 from sagemaker.workflow.execution_variables import ExecutionVariables
 from sagemaker.workflow.functions import Join
 from sagemaker.model_monitor import DatasetFormat, model_monitoring
-from sagemaker.clarify import (
-    BiasConfig,
-    DataConfig,
-    ModelConfig
-)
+from sagemaker.clarify import BiasConfig, DataConfig, ModelConfig
+
 from sagemaker.workflow.model_step import ModelStep
 
 from sagemaker.workflow.pipeline_context import PipelineSession
@@ -146,8 +115,7 @@ def get_pipeline_custom_tags(new_tags, region, sagemaker_project_name=None):
         sm_client = get_sagemaker_client(region)
         response = sm_client.describe_project(ProjectName=sagemaker_project_name)
         sagemaker_project_arn = response["ProjectArn"]
-        response = sm_client.list_tags(
-            ResourceArn=sagemaker_project_arn)
+        response = sm_client.list_tags(ResourceArn=sagemaker_project_arn)
         project_tags = response["Tags"]
         for project_tag in project_tags:
             new_tags.append(project_tag)
@@ -263,7 +231,7 @@ def get_pipeline(
 
     data_quality_check_config = DataQualityCheckConfig(
         baseline_dataset=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        dataset_format=DatasetFormat.csv(header=False, output_columns_position="START"),
+        dataset_format=DatasetFormat.csv(header=True),
         output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
     )
 
@@ -275,7 +243,8 @@ def get_pipeline(
         check_job_config=check_job_config,
         supplied_baseline_statistics=supplied_baseline_statistics_data_quality,
         supplied_baseline_constraints=supplied_baseline_constraints_data_quality,
-        model_package_group_name=model_package_group_name
+        model_package_group_name=model_package_group_name,
+        depends_on=["PreprocessFraudData"]
     )
 
 
@@ -317,7 +286,8 @@ def get_pipeline(
         check_job_config=check_job_config,
         skip_check=skip_check_data_bias,
         register_new_baseline=register_new_baseline_data_bias,
-        model_package_group_name=model_package_group_name
+        model_package_group_name=model_package_group_name,
+        depends_on=["PreprocessFraudData"]
     )
 
     image_uri = sagemaker.image_uris.retrieve(
@@ -421,9 +391,9 @@ def get_pipeline(
 
     step_args = transformer.transform(
         data=transform_inputs.data,
-        input_filter="$[0:-1]",
+        input_filter="$[0:-1]", # Exclude the last column (Is Fraudulent)
         join_source="Input",
-        output_filter="$[0,-1]",
+        output_filter="$.['label', 'features']", # Output prediction and label
         content_type="text/csv",
         split_type="Line",
     )
@@ -443,11 +413,11 @@ def get_pipeline(
 
     model_quality_check_config = ModelQualityCheckConfig(
         baseline_dataset=step_transform.properties.TransformOutput.S3OutputPath,
-        dataset_format=DatasetFormat.csv(header=False),
+        dataset_format=DatasetFormat.csv(header=True),
         output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='BinaryClassification',
-        probability_attribute='_c0',  # Predicted probability
-        ground_truth_attribute='_c1'  # Actual label
+        probability_attribute='label',  # Predicted probability
+        ground_truth_attribute='features'  # Actual label
     )
 
     model_quality_check_step = QualityCheckStep(
@@ -473,7 +443,7 @@ def get_pipeline(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
         s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelbiascheckstep']),
         s3_analysis_config_output_path=model_bias_analysis_cfg_output_path,
-        label=0,
+        label="Is Fraudulent",
         dataset_type="text/csv",
     )
 
@@ -516,18 +486,13 @@ def get_pipeline(
     # use `SHAPConfig`. For more information of `explainability_config`, visit the Clarify documentation at
     # https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-model-explainability.html.
 
-    model_explainability_analysis_cfg_output_path = "s3://{}/{}/{}/{}".format(
-        default_bucket,
-        base_job_prefix,
-        "modelexplainabilitycheckstep",
-        "analysis_cfg"
-    )
+    model_explainability_analysis_cfg_output_path = f"s3://{default_bucket}/{base_job_prefix}/modelexplainabilitycheckstep/analysis_cfg"
 
     model_explainability_data_config = DataConfig(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelexplainabilitycheckstep']),
+        s3_output_path=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelexplainabilitycheckstep']),
         s3_analysis_config_output_path=model_explainability_analysis_cfg_output_path,
-        label=0,
+        label="Is Fraudulent",
         dataset_type="text/csv",
     )
     shap_config = SHAPConfig(
@@ -680,13 +645,6 @@ def get_pipeline(
     # Every time a baseline is calculated, it is not necessary that the baselines used for drift checks are updated to
     # the newly calculated baselines. In some cases, users may retain an older version of the baseline file to be used
     # for drift checks and not register new baselines that are calculated in the Pipeline run.
-
-    model = Model(
-        image_uri=image_uri,
-        model_data=best_training_job,
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
 
     # Register model step
     step_args = model.register(
