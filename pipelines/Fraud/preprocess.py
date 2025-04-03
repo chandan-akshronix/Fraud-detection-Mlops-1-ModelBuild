@@ -284,7 +284,7 @@ if __name__ == "__main__":
     logger.info("preprocessor.pkl file saved successfully.")
 
     # Package the preprocessor.pkl into a tar.gz archive
-    model_tar = os.path.join(artifacts_dir, "model.tar.gz")
+    model_tar = os.path.join(artifacts_dir, "preprocess.tar.gz")
     preprocessor_path = os.path.join(artifacts_dir, "preprocessor.pkl")
     
     if os.path.exists(preprocessor_path):
