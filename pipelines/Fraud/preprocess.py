@@ -257,10 +257,10 @@ if __name__ == "__main__":
     logger.info("Fit and Transform X_train")
     X_train_transformed = preprocessing_pipeline.fit_transform(X_train)
 
-    logger.info("Fit and Transform X_test")
+    logger.info("Transform X_test")
     X_test_transformed = preprocessing_pipeline.transform(X_test)
 
-    logger.info("Fit and Transform X_validation")
+    logger.info("Transform X_validation")
     X_validation_transformed = preprocessing_pipeline.transform(X_validation)
 
     logger.info("Concatenating X and y for both train, test and Validation")

@@ -357,7 +357,7 @@ def get_pipeline(
     )
 
     # Get best training job
-    best_training_job = step_tune.get_top_model_s3_uri(top_k=0, s3_bucket=default_bucket)
+    best_training_job = step_tune.get_top_model_s3_uri(top_k=0, s3_bucket=default_bucket,prefix=f"{base_job_prefix}/FraudTrain")
 
     # Create model
     model = Model(
