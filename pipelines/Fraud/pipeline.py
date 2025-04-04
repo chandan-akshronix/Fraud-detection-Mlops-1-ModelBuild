@@ -668,7 +668,7 @@ def get_pipeline(
             property_file=evaluation_report,
             json_path="classification_metrics.f1_score.value"
         ),
-        right=0.4,
+        right=0.1,
     )
 
     step_cond = ConditionStep(
