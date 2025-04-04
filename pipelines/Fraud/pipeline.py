@@ -1,12 +1,7 @@
-"""Process -> DataQualityCheck/DataBiasCheck -> Tune -> Evaluate -> Condition
-                                                 |
-                                                 v
-                                      CreateModel -> ModelBiasCheck/ModelExplainabilityCheck
-                                                 |
-                                                 v
-                                       BatchTransform -> ModelQualityCheck
-
-Implements a get_pipeline(**kwargs) method.
+"""
+Process -> DataQualityCheck/DataBiasCheck -> Tune -> CreateModel -> BatchTransform -> ModelQualityCheck & EvaluatePostTransform -> Condition -> RegisterModel
+|                                          |
++------------------------------------------+-> ModelBiasCheck/ModelExplainabilityCheck
 """
 import os
 
@@ -398,7 +393,7 @@ def get_pipeline(
         data=transform_inputs.data,
         input_filter="$[1:]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$[0,0]", # Prediction(probabilities) + label (final prediction in 0 or 1) #nite we are generating raw results here and will be verified in model quality check
+        output_filter="$[-1,0]", # Prediction(probabilities) + label (final prediction in 0 or 1) #nite we are generating raw results here and will be verified in model quality check
         content_type="text/csv",
         split_type="Line",
     )
@@ -521,42 +516,38 @@ def get_pipeline(
         model_package_group_name=model_package_group_name
     )
 
-    # Evaluation step
-    script_eval = ScriptProcessor(
-        image_uri=image_uri,
+    # New EvaluatePostTransform step (replaces original EvaluateFraudModel)
+    eval_post_transform_processor = ScriptProcessor(
+        image_uri=sagemaker.image_uris.retrieve("sklearn", region, version="0.23-1"),
         command=["python3"],
         instance_type=processing_instance_type,
         instance_count=1,
-        base_job_name=f"{base_job_prefix}/script-Fraud-eval",
+        base_job_name=f"{base_job_prefix}/script-Fraud-eval-post-transform",
         sagemaker_session=pipeline_session,
         role=role,
     )
-    step_args = script_eval.run(
+    step_args = eval_post_transform_processor.run(
         inputs=[
             ProcessingInput(
-                source=best_training_job,
-                destination="/opt/ml/processing/model",
-            ),
-            ProcessingInput(
-                source=step_process.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
-                destination="/opt/ml/processing/test",
+                source=Join(on='/', values=[step_transform.properties.TransformOutput.S3OutputPath, 'test.csv.out']),
+                destination="/opt/ml/processing/predictions",
             ),
         ],
         outputs=[
             ProcessingOutput(output_name="evaluation", source="/opt/ml/processing/evaluation"),
         ],
-        code=os.path.join(BASE_DIR, "evaluate.py"),
+        code=os.path.join(BASE_DIR, "evaluate_post_transform.py")
     )
     evaluation_report = PropertyFile(
         name="FraudEvaluationReport",
         output_name="evaluation",
         path="evaluation.json",
     )
-    step_eval = ProcessingStep(
-        name="EvaluateFraudModel",
+    step_eval_post_transform = ProcessingStep(
+        name="EvaluateFraudModelPostTransform",
         step_args=step_args,
         property_files=[evaluation_report],
-        depends_on=[step_tune.name]
+        depends_on=["FraudTransform"]
     )
 
     model_metrics = ModelMetrics(
@@ -673,7 +664,7 @@ def get_pipeline(
     # Replace the condition
     cond_gte = ConditionGreaterThanOrEqualTo(
         left=JsonGet(
-            step_name=step_eval.name,
+            step_name=step_eval_post_transform.name,
             property_file=evaluation_report,
             json_path="classification_metrics.f1_score.value"
         ),
@@ -685,7 +676,7 @@ def get_pipeline(
         conditions=[cond_gte],
         if_steps=[step_register],
         else_steps=[],
-        depends_on=[step_eval.name]
+        depends_on=["EvaluateFraudModelPostTransform"]
     )
 
     # pipeline instance
@@ -720,7 +711,7 @@ def get_pipeline(
             register_new_baseline_model_explainability,
             supplied_baseline_constraints_model_explainability
         ],
-        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval, step_cond],
+        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval_post_transform, step_cond],
         sagemaker_session=pipeline_session,
     )
     return pipeline
