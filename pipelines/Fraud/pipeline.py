@@ -398,7 +398,7 @@ def get_pipeline(
         data=transform_inputs.data,
         input_filter="$[1:]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$[0,0]", # Prediction + all features ## Why $[0:] as it keeps the full output, which is already correct since input_filter excludes Is Fraudulent.
+        output_filter="$[0,0]", # Prediction(probabilities) + label (final prediction in 0 or 1) #nite we are generating raw results here and will be verified in model quality check
         content_type="text/csv",
         split_type="Line",
     )
@@ -419,11 +419,11 @@ def get_pipeline(
 
     model_quality_check_config = ModelQualityCheckConfig(
         baseline_dataset=step_transform.properties.TransformOutput.S3OutputPath,
-        dataset_format=DatasetFormat.csv(header=True),
+        dataset_format=DatasetFormat.csv(header=False),
         output_s3_uri=Join(on='/', values=['s3://', default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='BinaryClassification',
         probability_attribute='0',  # Predicted probability or Prediction (first column)
-        ground_truth_attribute='features'  # Actual label or Should be actual label, but excluded; adjust logic
+        ground_truth_attribute='1'  # True label
     )
 
     model_quality_check_step = QualityCheckStep(
@@ -434,7 +434,8 @@ def get_pipeline(
         check_job_config=check_job_config,
         supplied_baseline_statistics=supplied_baseline_statistics_model_quality,
         supplied_baseline_constraints=supplied_baseline_constraints_model_quality,
-        model_package_group_name=model_package_group_name
+        model_package_group_name=model_package_group_name,
+        depends_on=["FraudTransform"]
     )
 
     ### Check for Model Bias
@@ -676,7 +677,7 @@ def get_pipeline(
             property_file=evaluation_report,
             json_path="classification_metrics.f1_score.value"
         ),
-        right=0.6,
+        right=0.4,
     )
 
     step_cond = ConditionStep(

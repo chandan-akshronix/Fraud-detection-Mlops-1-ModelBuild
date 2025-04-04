@@ -272,7 +272,7 @@ if __name__ == "__main__":
     # Write CSV files
     process_train_set_with_pipeline.to_csv(f"{base_dir}/train/train.csv", index=False)
     logger.info("Train dataset written to %s/train/train.csv", base_dir)
-    process_test_set_with_pipeline.to_csv(f"{base_dir}/test/test.csv", index=False)
+    process_test_set_with_pipeline.to_csv(f"{base_dir}/test/test.csv", index=False, header=False)
     logger.info("Test dataset written to %s/test/test.csv", base_dir)
     process_validation_set_with_pipeline.to_csv(f"{base_dir}/validation/validation.csv", index=False)
     logger.info("Validation dataset written to %s/validation/validation.csv", base_dir)
