@@ -417,8 +417,8 @@ def get_pipeline(
         dataset_format=DatasetFormat.csv(header=False),
         output_s3_uri=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'modelqualitycheckstep']),
         problem_type='BinaryClassification',
-        probability_attribute='0',  # Predicted probability or Prediction (first column)
-        ground_truth_attribute='1', # True label
+        probability_attribute='_c0',  # Predicted probability or Prediction (first column)
+        ground_truth_attribute='_c1', # True label
         probability_threshold_attribute=0.5 # Added threshold to binarize probabilities 
     )
 
