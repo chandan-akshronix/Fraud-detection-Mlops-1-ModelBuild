@@ -419,7 +419,7 @@ def get_pipeline(
         problem_type='BinaryClassification',
         probability_attribute='0',  # Predicted probability or Prediction (first column)
         ground_truth_attribute='1', # True label
-        probability_threshold=0.5 # Added threshold to binarize probabilities 
+        probability_threshold_attribute=0.5 # Added threshold to binarize probabilities 
     )
 
     model_quality_check_step = QualityCheckStep(
