@@ -6,6 +6,7 @@ phases:
       python: 3.11
     commands:
       - pip install --upgrade --force-reinstall . "awscli>1.20.30"
+      - pip install -U sagemaker
   
   build:
     commands:
