@@ -209,6 +209,13 @@ def get_pipeline(
             name="PreprocessFraudData",
             step_args=step_args,
         )
+    preprocess_s3_path = Join(
+    on='/',
+    values=[
+        step_process.properties.ProcessingOutputConfig.Outputs["preprocess_pickle_file"].S3Output.S3Uri,
+        "preprocess.tar.gz"
+    ]
+    )
 
     ### Calculating the Data Quality
 
@@ -656,6 +663,7 @@ def get_pipeline(
         approval_status=model_approval_status,
         model_metrics=model_metrics,
         drift_check_baselines=drift_check_baselines,
+        tags=[{"Key": "preprocess_s3_path", "Value": preprocess_s3_path}]
     )
     step_register = ModelStep(
         name="RegisterFraudModel",
