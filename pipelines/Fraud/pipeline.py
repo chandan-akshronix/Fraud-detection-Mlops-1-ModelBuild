@@ -657,7 +657,7 @@ def get_pipeline(
         approval_status=model_approval_status,
         model_metrics=model_metrics,
         drift_check_baselines=drift_check_baselines,
-        model_package_tags=[{"Key": "preprocess_s3_path", "Value": preprocess_s3_path}]
+        customer_metadata_properties={"preprocess_s3_path": preprocess_s3_path}
     )
     step_register = ModelStep(
         name="RegisterFraudModel",
