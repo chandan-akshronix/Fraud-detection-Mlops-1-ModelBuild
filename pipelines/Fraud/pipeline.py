@@ -156,7 +156,7 @@ def get_pipeline(
         name="InputDataUrl",
         default_value=f"s3://akshronix-frauddata/Chandan's Playground MLOPS/Test 1/Whole Fraud Dataframe.csv",
     )
-    
+
     # for data quality check step
     skip_check_data_quality = ParameterBoolean(name="SkipDataQualityCheck", default_value=False)
     register_new_baseline_data_quality = ParameterBoolean(name="RegisterNewDataQualityBaseline", default_value=False)
@@ -203,7 +203,7 @@ def get_pipeline(
                 ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
             ],
             code=os.path.join(BASE_DIR, "preprocess.py"),
-            arguments=["--input-data", input_data],
+            arguments=["--input-data",input_data],
         )
     step_process = ProcessingStep(
             name="PreprocessFraudData",
