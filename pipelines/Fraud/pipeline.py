@@ -209,13 +209,7 @@ def get_pipeline(
             name="PreprocessFraudData",
             step_args=step_args,
         )
-
-    preprocess_s3_path = Join(
-    on="/",
-    values=[
-        step_process.properties.ProcessingOutputConfig.Outputs["preprocess_pickle_file"].S3Output.S3Uri,
-        "preprocess.tar.gz"
-    ])
+    preprocess_s3_path = step_process.properties.ProcessingOutputConfig.Outputs["preprocess_pickle_file"].S3Output.S3Uri
 
     ### Calculating the Data Quality
 
