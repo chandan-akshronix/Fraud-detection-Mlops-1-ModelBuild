@@ -42,6 +42,10 @@ if __name__ == "__main__":
     pathlib.Path(f"{base_dir}/artifacts").mkdir(parents=True, exist_ok=True)
 
     input_data = args.input_data
+
+    if not input_data.startswith("s3://") or len(input_data.split("/")) < 4:
+        raise ValueError(f"Invalid S3 URI: {input_data}")
+        
     bucket = input_data.split("/")[2]
     key = "/".join(input_data.split("/")[3:])
 
