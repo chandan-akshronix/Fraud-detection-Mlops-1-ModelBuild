@@ -154,7 +154,7 @@ def get_pipeline(
     )
     input_data = ParameterString(
         name="InputDataUrl",
-        default_value=f"s3://akshronix-frauddata/Chandan's Playground MLOPS/Test 1/Whole Fraud Dataframe.csv",
+        default_value=f"s3://akshronix-frauddata/Chandan's Playground MLOPS/Test 1/Whole Fraud Dataframe.csv"
     )
 
     # for data quality check step
@@ -209,7 +209,12 @@ def get_pipeline(
             name="PreprocessFraudData",
             step_args=step_args,
         )
-    preprocess_s3_path = step_process.properties.ProcessingOutputConfig.Outputs["preprocess_pickle_file"].S3Output.S3Uri
+    preprocess_s3_path = Join(
+    on="/",
+    values=[
+        step_process.properties.ProcessingOutputConfig.Outputs["preprocess_pickle_file"].S3Output.S3Uri,
+        "preprocess.tar.gz"
+    ])
 
     ### Calculating the Data Quality
 
