@@ -203,7 +203,6 @@ def get_pipeline(
                 ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
             ],
             code=os.path.join(BASE_DIR, "preprocess.py"),
-            source_dir=BASE_DIR,
             arguments=["--input-data",input_data.default_value],
         )
     step_process = ProcessingStep(

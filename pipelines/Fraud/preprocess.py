@@ -21,6 +21,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn import set_config # output in pandas dataframe of pipeline
 
+# Determine the directory of the current script
+current_dir = os.path.dirname(os.path.realpath(__file__))
+
+# Append the appropriate directory to sys.path
+# For example, if custom_transformers.py is in a subfolder called "pipelines/Fraud":
+dependency_path = os.path.join(current_dir, "pipelines", "Fraud")
+sys.path.insert(0, dependency_path)
+
 
 from pipelines.Fraud.custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
