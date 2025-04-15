@@ -16,7 +16,7 @@ from sagemaker.transformer import Transformer
 
 from sagemaker.model_metrics import MetricsSource, ModelMetrics, FileSource
 from sagemaker.drift_check_baselines import DriftCheckBaselines
-from sagemaker.processing import ProcessingInput,ProcessingOutput, ScriptProcessor
+from sagemaker.processing import ProcessingInput,ProcessingOutput, ScriptProcessor, FrameworkProcessor
 from sagemaker.sklearn.processing import SKLearnProcessor
 from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
@@ -192,33 +192,36 @@ def get_pipeline(
     )
 
     # Initialize ScriptProcessor
-    sklearn_processor = SKLearnProcessor(
+    framework_processor = FrameworkProcessor(
+    estimator_cls=sagemaker.sklearn.SKLearn,
     framework_version="1.2-1",
     instance_type=processing_instance_type,
     instance_count=processing_instance_count,
     base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
     sagemaker_session=pipeline_session,
-    role=role,
+    role=role
     )
 
     # Define the processing step arguments
-    step_args = sklearn_processor.run(
-        outputs=[
-            ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
-            ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
-            ProcessingOutput(output_name="stream", source="/opt/ml/processing/stream"),
-            ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),
-            ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
-        ],
-        code=os.path.join(BASE_DIR,"preprocess.py"),  # Relative path to source_dir
-        arguments=["--input-data", input_data.default_value],
+    step_args = framework_processor.run(
+    outputs=[
+        ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
+        ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
+        ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
+        ProcessingOutput(output_name="stream", source="/opt/ml/processing/stream"),
+        ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),
+        ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
+    ],
+    code="preprocess.py",
+    source_dir=BASE_DIR,
+    arguments=["--input-data", input_data.default_value]
     )
 
     step_process = ProcessingStep(
-            name="PreprocessFraudData",
-            step_args=step_args,
-        )
+    name="PreprocessFraudData",
+    step_args=step_args
+    )
+    
     preprocess_s3_path = Join(
     on="/",
     values=[
