@@ -21,12 +21,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn import set_config # output in pandas dataframe of pipeline
 
-base_dir = os.path.dirname(os.path.realpath(__file__))
-
-print(f"Base_Dir for Preprocess Path is {base_dir}")
-
-sys.path.insert(0, os.path.join(base_dir, "pipelines", "Fraud"))
-
 
 from pipelines.Fraud.custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
