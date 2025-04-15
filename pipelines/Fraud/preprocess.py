@@ -19,7 +19,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn import set_config # output in pandas dataframe of pipeline
-from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
+from pipelines.Fraud.custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
