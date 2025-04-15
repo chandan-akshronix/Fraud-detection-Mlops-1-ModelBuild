@@ -211,8 +211,7 @@ def get_pipeline(
             ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),
             ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
         ],
-        code="preprocess.py",  # Relative path to source_dir
-        source_dir=BASE_DIR,   # Directory containing preprocess.py and custom_transformers.py
+        code=os.path.join(BASE_DIR,"preprocess.py"),  # Relative path to source_dir
         arguments=["--input-data", input_data.default_value],
     )
 
