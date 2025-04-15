@@ -203,7 +203,8 @@ def get_pipeline(
                 ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),  
                 ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
             ],
-            code="preprocess.py",
+            code=os.path.join(BASE_DIR, "preprocess.py"),
+            dependencies=[os.path.join(BASE_DIR, "custom_transformers.py")],
             arguments=["--input-data",input_data.default_value],
         )
     step_process = ProcessingStep(
