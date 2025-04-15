@@ -10,6 +10,7 @@ import joblib
 import tarfile
 import sys
 
+import sagemaker
 import boto3
 import numpy as np
 import pandas as pd
@@ -28,6 +29,8 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 print(f"Current Directory {current_dir}")
 
 print("Files in current directory:", os.listdir('/opt/ml/processing/input/code'))
+
+print(sagemaker.__version__)
 
 from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 

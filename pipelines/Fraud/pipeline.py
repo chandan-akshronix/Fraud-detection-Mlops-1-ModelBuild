@@ -192,18 +192,17 @@ def get_pipeline(
     )
 
     # Initialize ScriptProcessor
-    script_processor = ScriptProcessor(
-        image_uri=image_uri,
-        command=['python3'],
-        instance_type=processing_instance_type,
-        instance_count=processing_instance_count,
-        base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
-        sagemaker_session=pipeline_session,
-        role=role,
+    sklearn_processor = SKLearnProcessor(
+    framework_version="1.2-1",
+    instance_type=processing_instance_type,
+    instance_count=processing_instance_count,
+    base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
+    sagemaker_session=pipeline_session,
+    role=role,
     )
 
     # Define the processing step arguments
-    step_args = script_processor.run(
+    step_args = sklearn_processor.run(
         outputs=[
             ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
             ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
@@ -212,8 +211,8 @@ def get_pipeline(
             ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),
             ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
         ],
-        code="preprocess.py",
-        source_dir=BASE_DIR,
+        code="preprocess.py",  # Relative path to source_dir
+        source_dir=BASE_DIR,   # Directory containing preprocess.py and custom_transformers.py
         arguments=["--input-data", input_data.default_value],
     )
 
