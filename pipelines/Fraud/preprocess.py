@@ -24,12 +24,6 @@ from sklearn import set_config # output in pandas dataframe of pipeline
 # Determine the directory of the current script
 current_dir = os.path.dirname(os.path.realpath(__file__))
 
-# Append the appropriate directory to sys.path
-# For example, if custom_transformers.py is in a subfolder called "pipelines/Fraud":
-dependency_path = os.path.join(current_dir, "pipelines", "Fraud")
-sys.path.insert(0, dependency_path)
-
-
 from .custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 logger = logging.getLogger()
