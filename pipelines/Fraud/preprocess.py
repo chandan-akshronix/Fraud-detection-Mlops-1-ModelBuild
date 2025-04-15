@@ -6,6 +6,7 @@ import pathlib
 import requests
 import tempfile
 import pickle
+import joblib
 import tarfile
 import sys
 
@@ -23,11 +24,12 @@ from sklearn import set_config # output in pandas dataframe of pipeline
 
 # Determine the directory of the current script
 current_dir = os.path.dirname(os.path.realpath(__file__))
+
 print(f"Current Directory {current_dir}")
 
-sys.path.insert(0, current_dir)
+print("Files in current directory:", os.listdir('/opt/ml/processing/input/code'))
 
-from .custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
+from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
