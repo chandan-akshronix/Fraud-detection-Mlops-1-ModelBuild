@@ -30,7 +30,7 @@ dependency_path = os.path.join(current_dir, "pipelines", "Fraud")
 sys.path.insert(0, dependency_path)
 
 
-from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
+from .custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
