@@ -191,7 +191,7 @@ def get_pipeline(
             instance_count=processing_instance_count,
             base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
             sagemaker_session=pipeline_session,
-            role=role
+            role=role,
         )
     step_args = sklearn_processor.run(
             outputs=[
@@ -202,7 +202,7 @@ def get_pipeline(
                 ProcessingOutput(output_name="onhold", source="/opt/ml/processing/onhold"),  
                 ProcessingOutput(output_name="preprocess_pickle_file", source="/opt/ml/processing/artifacts")
             ],
-            code="preprocess.py",
+            code=os.path.join(BASE_DIR, "preprocess.py"),
             arguments=["--input-data",input_data.default_value],
         )
     step_process = ProcessingStep(
