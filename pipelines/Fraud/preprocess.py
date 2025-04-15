@@ -26,9 +26,8 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 print(f"Current Directory {current_dir}")
 
 sys.path.insert(0, current_dir)
-print(f"Current Directory {current_dir}")
 
-from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
+from .custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
