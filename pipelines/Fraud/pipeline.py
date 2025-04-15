@@ -191,8 +191,7 @@ def get_pipeline(
             instance_count=processing_instance_count,
             base_job_name=f"{base_job_prefix}/sklearn-fraud-preprocess",
             sagemaker_session=pipeline_session,
-            role=role,
-            source_dir=BASE_DIR
+            role=role
         )
     step_args = sklearn_processor.run(
             outputs=[
