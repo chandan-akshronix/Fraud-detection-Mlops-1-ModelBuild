@@ -7,6 +7,7 @@ import requests
 import tempfile
 import pickle
 import tarfile
+import sys
 
 import boto3
 import numpy as np
@@ -22,7 +23,7 @@ from sklearn import set_config # output in pandas dataframe of pipeline
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 
-print("Base_Dir for Preprocess Path is {base_dir}")
+print(f"Base_Dir for Preprocess Path is {base_dir}")
 
 sys.path.insert(0, os.path.join(base_dir, "pipelines", "Fraud"))
 
