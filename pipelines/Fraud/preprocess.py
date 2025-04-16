@@ -133,10 +133,20 @@ if __name__ == "__main__":
     set_config(transform_output="pandas") # default o/p is numpy array, but to avoid explanability issues with models, need o/p in DataFrame
 
     logger.info("Fit and Transform X_train")
+
+    logger.info(f"X_train column names before transform {X_train.columns} & 1st Row of X_train is {X_train.head(1)}")
+
     X_train_transformed = preprocessing_pipeline.fit_transform(X_train)
 
+    logger.info(f"X_train_transformed column names before transform {X_train_transformed.columns} & 1st Row of X_train is {X_train_transformed.head(1)}")
+
     logger.info("Transform X_test")
+
+    logger.info(f"X_test column names before transform {X_test.columns} & 1st Row of X_train is {X_test.head(1)}")
+
     X_test_transformed = preprocessing_pipeline.transform(X_test)
+
+    logger.info(f"X_test_transformed column names before transform {X_test_transformed.columns} & 1st Row of X_train is {X_test_transformed.head(1)}")
 
     logger.info("Transform X_validation")
     X_validation_transformed = preprocessing_pipeline.transform(X_validation)
