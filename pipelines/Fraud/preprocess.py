@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     logger.info(f"Main Dataframe column names before anything {df.columns}")
 
-    df.drop(columns=["Unnamed: 0"], axis = 1)
+    df = df.drop(columns=["Unnamed: 0"], axis = 1)
 
     logger.info("First Row of Dataframe")
     print(df.head(1))
