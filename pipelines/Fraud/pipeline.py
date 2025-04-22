@@ -377,6 +377,8 @@ def get_pipeline(
     model = Model(
         image_uri=image_uri,
         model_data=best_training_job,
+        entry_point='xgboost_inference.py',
+        source_dir=BASE_DIR,
         sagemaker_session=pipeline_session,
         role=role,
     )
