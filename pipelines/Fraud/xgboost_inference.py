@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())  
+logger.addHandler(logging.StreamHandler())
 
 def model_fn(model_dir):
     try:
@@ -26,14 +26,19 @@ def input_fn(request_body, request_content_type):
         try:
             # Log the raw input for debugging
             logger.info(f"Raw input data: {request_body}")
-
-            # Clean the input: remove newlines and extra spaces
-            cleaned_input = request_body.replace('\n', '').replace('\r', '').strip()
-
-            # Split by commas and convert to floats
-            data = np.array([list(map(float, cleaned_input.split(',')))])
-            dmatrix = xgb.DMatrix(data)
-            logger.info(f"Input data shape: {data.shape}")
+            
+            # Split the request body by newlines to handle multiple records
+            lines = request_body.strip().split('\n')
+            data = []
+            for line in lines:
+                if line.strip():  # Skip empty lines
+                    row = list(map(float, line.strip().split(',')))
+                    data.append(row)
+            if not data:
+                raise ValueError("No data in request")
+            # Create DMatrix with multiple rows
+            dmatrix = xgb.DMatrix(np.array(data))
+            logger.info(f"Input data shape: {np.array(data).shape}")
             return dmatrix
         except Exception as e:
             logger.error(f"Error parsing CSV input: {str(e)}")
@@ -52,17 +57,21 @@ def predict_fn(input_data, model):
         logger.error(f"Error during prediction: {str(e)}")
         raise
 
-def output_fn(prediction, accept):
-    """Format the prediction output."""
-    logger.info(f"Prediction type: {type(prediction)}, value: {prediction}")
-    probability = prediction[0]
+def output_fn(predictions, accept):
+    """Format the prediction output for multiple records."""
+    logger.info(f"Predictions: {predictions}")
     threshold = 0.5
-    binary_prediction = 1 if probability > threshold else 0
-    logger.info(f"Probability: {probability}, Binary prediction: {binary_prediction}")
-    
     if accept == 'text/csv':
-        return f"{probability},{binary_prediction}", 'text/csv'
+        output_lines = []
+        for probability in predictions:
+            binary_prediction = 1 if probability > threshold else 0
+            output_lines.append(f"{probability},{binary_prediction}")
+        return '\n'.join(output_lines), 'text/csv'
     elif accept == 'application/json':
-        return json.dumps({"probability": probability, "prediction": binary_prediction}), 'application/json'
+        results = []
+        for probability in predictions:
+            binary_prediction = 1 if probability > threshold else 0
+            results.append({"probability": float(probability), "prediction": binary_prediction})
+        return json.dumps(results), 'application/json'
     else:
         raise ValueError(f"Unsupported accept type: {accept}")
