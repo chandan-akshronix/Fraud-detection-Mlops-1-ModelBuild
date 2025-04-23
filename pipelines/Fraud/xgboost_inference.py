@@ -9,12 +9,16 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 def model_fn(model_dir):
-    """Load the XGBoost model from the model directory."""
-    model = xgb.Booster()
-    model_path = os.path.join(model_dir, 'xgboost-model')
-    logger.info(f"Loading XGBoost model from {model_path}")
-    model.load_model(model_path)
-    return model
+    try:
+        model = xgb.Booster()
+        model_path = os.path.join(model_dir, 'xgboost-model')  # Load the specific file
+        logger.info(f"Loading XGBoost model from {model_path}")
+        logger.info(f"Files in model directory: {os.listdir(model_dir)}")
+        model.load_model(model_path)
+        return model
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        raise
 
 def input_fn(request_body, request_content_type):
     """Parse input data from the request."""
