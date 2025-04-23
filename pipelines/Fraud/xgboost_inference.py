@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+logger.addHandler(logging.StreamHandler())  
 
 def model_fn(model_dir):
     try:
@@ -24,7 +24,14 @@ def input_fn(request_body, request_content_type):
     """Parse input data from the request."""
     if request_content_type == 'text/csv':
         try:
-            data = np.array([list(map(float, request_body.strip().split(',')))])
+            # Log the raw input for debugging
+            logger.info(f"Raw input data: {request_body}")
+
+            # Clean the input: remove newlines and extra spaces
+            cleaned_input = request_body.replace('\n', '').replace('\r', '').strip()
+
+            # Split by commas and convert to floats
+            data = np.array([list(map(float, cleaned_input.split(',')))])
             dmatrix = xgb.DMatrix(data)
             logger.info(f"Input data shape: {data.shape}")
             return dmatrix
