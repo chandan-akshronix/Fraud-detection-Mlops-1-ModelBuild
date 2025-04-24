@@ -414,7 +414,6 @@ def get_pipeline(
         data=transform_inputs.data,
         input_filter="$[1:]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$[-1,0]", # Prediction(probabilities) + label (final prediction in 0 or 1) #nite we are generating raw results here and will be verified in model quality check
         content_type="text/csv",
         split_type="Line",
     )
