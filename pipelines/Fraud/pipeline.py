@@ -414,7 +414,7 @@ def get_pipeline(
         data=transform_inputs.data,
         input_filter="$[1:]", # Exclude Is Fraudulent (first column)
         join_source="Input",
-        output_filter="$[-2:]",
+        output_filter="$[-2,0,-1]",
         content_type="text/csv",
         split_type="Line",
     )
