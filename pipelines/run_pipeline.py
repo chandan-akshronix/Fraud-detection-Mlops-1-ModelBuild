@@ -119,7 +119,7 @@ def main():  # pragma: no cover
         # Setting the attempts and delay (in seconds) will modify the overall time the pipeline waits. 
         # If the execution is taking a longer time, update these parameters to a larger value.
         # Eg: The total wait time is calculated as 60 * 120 = 7200 seconds (2 hours)
-        execution.wait(max_attempts=360, delay=60)
+        execution.wait(max_attempts=420, delay=60)
         
         print("\n#####Execution completed. Execution step details:")
 
