@@ -94,8 +94,6 @@ Fraud-detection-Mlops-1-ModelBuild/
 ### `pipelines/__init__.py`
 - **Purpose**: Initializes the `pipelines` module.
 - **How It Works**: Enables imports of submodules like `Fraud`.
-- **Input**: None.
-- **Output**: None (module initialization only).
 
 ### `pipelines/__version__.py`
 - **Purpose**: Stores version information for the pipeline.
@@ -124,44 +122,20 @@ Fraud-detection-Mlops-1-ModelBuild/
 ### `.coveragerc`
 - **Purpose**: Configures code coverage reporting.
 - **How It Works**: Specifies which files to include/exclude in coverage analysis during testing.
-- **Input**: None (configuration file).
-- **Output**: None (used by coverage tools).
 
 ### `.gitignore`
 - **Purpose**: Defines files and directories to exclude from version control.
 - **How It Works**: Prevents temporary files, logs, or sensitive data from being committed.
-- **Input**: None (configuration file).
-- **Output**: None (used by Git).
 
 ### `.pydocstylerc`
 - **Purpose**: Enforces documentation style standards.
 - **How It Works**: Configures `pydocstyle` to check for consistent docstrings.
-- **Input**: None (configuration file).
-- **Output**: None (used by linting tools).
 
 ### `codebuild-buildspec.yml`
 - **Purpose**: Specifies the AWS CodeBuild build process.
 - **How It Works**: Defines build phases (e.g., install, test, deploy) and artifacts for CI/CD.
 - **Input**: Source code from the repository.
 - **Output**: Build artifacts (e.g., test reports, packaged code).
-
-### `CONTRIBUTING.md`
-- **Purpose**: Outlines contribution guidelines.
-- **How It Works**: Provides instructions for submitting pull requests, coding standards, and contact info.
-- **Input**: None (static documentation).
-- **Output**: None (user guidance).
-
-### `LICENSE`
-- **Purpose**: Specifies the legal terms of use.
-- **How It Works**: Defines how the code can be used, modified, and distributed.
-- **Input**: None (static file).
-- **Output**: None (legal documentation).
-
-### `README.md`
-- **Purpose**: Documents the project (this file).
-- **How It Works**: Offers an overview, setup instructions, and file descriptions.
-- **Input**: None (static documentation).
-- **Output**: None (user guidance).
 
 ### `sagemaker-pipelines-project.ipynb`
 - **Purpose**: Demonstrates pipeline usage in a Jupyter notebook.
