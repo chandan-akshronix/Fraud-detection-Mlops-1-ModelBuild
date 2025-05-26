@@ -3,24 +3,20 @@ import argparse
 import logging
 import os
 import pathlib
-import requests
-import tempfile
-import pickle
 import joblib
 import tarfile
-import sys
-
 import boto3
 import numpy as np
 import pandas as pd
-
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn import set_config # output in pandas dataframe of pipeline
+from sklearn import set_config
+from collections import Counter
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 # Determine the directory of the current script
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -29,12 +25,21 @@ print(f"Current Directory {current_dir}")
 
 print("Files in current directory:", os.listdir('/opt/ml/processing/input/code'))
 
-from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
+# Initialize logger
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
+
+def apply_resampling(X_train, y_train):
+    smote = BorderlineSMOTE(sampling_strategy=0.10, random_state=108, k_neighbors=5, m_neighbors=10)
+    X_res, y_res = smote.fit_resample(X_train, y_train)
+    logger.info(f"After SMOTE: {Counter(y_res)}")
+    undersampler = RandomUnderSampler(sampling_strategy=0.33, random_state=108, replacement=True)
+    X_res, y_res = undersampler.fit_resample(X_res, y_res)
+    logger.info(f"After UnderSampling: {Counter(y_res)}")
+    return X_res, y_res
 
 if __name__ == "__main__":
     logger.debug("Starting preprocessing.")
@@ -107,15 +112,11 @@ if __name__ == "__main__":
 
     def create_preprocessing_pipeline():
         # Categorical columns after feature engineering
-        low_cardinality_cols = ['Payment Method', 'Product Category', 'Device Used', 
-                               'Hour_Bin', 'Age_Category', 'Transaction_Size']
         high_cardinality_cols = ['Customer Location', 'Location_Device']
 
         # Encoding transformer
         encoding_transformer = ColumnTransformer(
             transformers=[
-                ('onehot', OneHotEncoder(drop='first', sparse=False, handle_unknown='ignore'), 
-                 low_cardinality_cols),
                 ('freq', FrequencyEncoder(), high_cardinality_cols)
             ],
             remainder='passthrough'  # Pass through numerical columns
@@ -155,10 +156,13 @@ if __name__ == "__main__":
     logger.info("Transform X_validation")
     X_validation_transformed = preprocessing_pipeline.transform(X_validation)
 
+    X_resampled, y_resampled = apply_resampling(X_train_transformed, y_train)
+
     logger.info("Concatenating X and y for both train, test and Validation")
-    process_train_set_with_pipeline = pd.concat([y_train, X_train_transformed],axis=1)
+    process_train_set_with_pipeline = pd.concat([y_resampled, X_resampled],axis=1)
     process_test_set_with_pipeline = pd.concat([y_test, X_test_transformed],axis=1)
     process_validation_set_with_pipeline = pd.concat([y_validation, X_validation_transformed],axis=1)
+
 
     # Write CSV files
     process_train_set_with_pipeline.to_csv(f"{base_dir}/train/train.csv", index=False)
