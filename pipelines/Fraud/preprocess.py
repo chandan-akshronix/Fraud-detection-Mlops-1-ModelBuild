@@ -8,24 +8,19 @@ import tarfile
 import boto3
 import numpy as np
 import pandas as pd
-# import imblearn
+import imblearn
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn import set_config
 from collections import Counter
-# from imblearn.over_sampling import BorderlineSMOTE
-# from imblearn.under_sampling import RandomUnderSampler
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.under_sampling import RandomUnderSampler
 from custom_transformers import FrequencyEncoder, FeatureEngineeringTransformer
 
 # Determine the directory of the current script
 current_dir = os.path.dirname(os.path.realpath(__file__))
-
-print(f"Current Directory {current_dir}")
-
-print("Files in current directory:", os.listdir('/opt/ml/processing/input/code'))
-
 
 # Initialize logger
 logger = logging.getLogger()
