@@ -215,7 +215,8 @@ def get_pipeline(
     ],
     code="preprocess.py",
     source_dir=BASE_DIR,
-    arguments=["--input-data", input_data.default_value]
+    arguments=["--input-data", input_data.default_value],
+    dependencies=['requirements.txt']
     )
 
     step_process = ProcessingStep(

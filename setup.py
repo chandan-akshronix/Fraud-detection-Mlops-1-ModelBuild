@@ -12,7 +12,7 @@ with open("README.md", "r") as f:
     readme = f.read()
 
 
-required_packages = ["sagemaker==2.243.1", "imbalanced-learn==0.13.0"]
+required_packages = ["sagemaker==2.243.1", "imbalanced-learn==0.13.0","imblearn"]
 extras = {
     "test": [
         "black",
