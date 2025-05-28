@@ -240,19 +240,19 @@ def get_pipeline(
     # the baseline, in this case, the training dataset from the data processing step, the dataset format, in this case,
     # a csv file with no headers, and the output path for the results of the data quality check.
 
-    check_job_config = CheckJobConfig(
-        role=role,
-        instance_count=1,
-        instance_type="ml.c5.4xlarge",
-        volume_size_in_gb=120,
-        sagemaker_session=pipeline_session,
-    )
+    # check_job_config = CheckJobConfig(
+    #     role=role,
+    #     instance_count=1,
+    #     instance_type="ml.c5.4xlarge",
+    #     volume_size_in_gb=120,
+    #     sagemaker_session=pipeline_session,
+    # )
 
-    data_quality_check_config = DataQualityCheckConfig(
-        baseline_dataset=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        dataset_format=DatasetFormat.csv(header=True),
-        output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
-    )
+    # data_quality_check_config = DataQualityCheckConfig(
+    #     baseline_dataset=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
+    #     dataset_format=DatasetFormat.csv(header=True),
+    #     output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
+    # )
 
     # data_quality_check_step = QualityCheckStep(
     #     name="DataQualityCheckStep",
@@ -278,26 +278,26 @@ def get_pipeline(
     # More details on `BiasConfig` can be found at
     # https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.clarify.BiasConfig
 
-    data_bias_analysis_cfg_output_path = f"s3://{default_bucket}/{base_job_prefix}/databiascheckstep/analysis_cfg"
+    # data_bias_analysis_cfg_output_path = f"s3://{default_bucket}/{base_job_prefix}/databiascheckstep/analysis_cfg"
 
-    data_bias_data_config = DataConfig(
-        s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
-        s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
-        label="Is Fraudulent",
-        headers=["Is Fraudulent","freq__Customer Location","freq__Location_Device","remainder__Transaction Amount","remainder__Quantity","remainder__Customer Age","remainder__Account Age Days","remainder__Transaction Hour","remainder__Amount_Log","remainder__Amount_per_Quantity","remainder__Day_of_Week","remainder__Day_of_Year", 'remainder__hour_sin','remainder__hour_cos',"remainder__Account_Age_Weeks",],
-        dataset_type="text/csv",
-        s3_analysis_config_output_path=data_bias_analysis_cfg_output_path,
-    )
+    # data_bias_data_config = DataConfig(
+    #     s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
+    #     s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
+    #     label="Is Fraudulent",
+    #     headers=["Is Fraudulent","freq__Customer Location","freq__Location_Device","remainder__Transaction Amount","remainder__Quantity","remainder__Customer Age","remainder__Account Age Days","remainder__Transaction Hour","remainder__Amount_Log","remainder__Amount_per_Quantity","remainder__Day_of_Week","remainder__Day_of_Year", 'remainder__hour_sin','remainder__hour_cos',"remainder__Account_Age_Weeks",],
+    #     dataset_type="text/csv",
+    #     s3_analysis_config_output_path=data_bias_analysis_cfg_output_path,
+    # )
 
     # We are using this bias config to configure clarify to detect bias based on the first feature in the featurized vector for Sex
-    data_bias_config = BiasConfig(
-        label_values_or_threshold=[1], facet_name=['remainder__Customer Age'], facet_values_or_threshold=[[80]]
-    )
+    # data_bias_config = BiasConfig(
+    #     label_values_or_threshold=[1], facet_name=['remainder__Customer Age'], facet_values_or_threshold=[[80]]
+    # )
 
-    data_bias_check_config = DataBiasCheckConfig(
-        data_config=data_bias_data_config,
-        data_bias_config=data_bias_config,
-    )
+    # data_bias_check_config = DataBiasCheckConfig(
+    #     data_config=data_bias_data_config,
+    #     data_bias_config=data_bias_config,
+    # )
 
     # data_bias_check_step = ClarifyCheckStep(
     #     name="DataBiasCheckStep",
@@ -369,7 +369,7 @@ def get_pipeline(
                 content_type="text/csv",
             ),
         },
-        depends_on=["DataQualityCheckStep", "DataBiasCheckStep"]
+        depends_on=["PreprocessFraudData"]
     )
 
     # Get best training job
