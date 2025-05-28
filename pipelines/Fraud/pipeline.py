@@ -206,9 +206,6 @@ def get_pipeline(
     role=role
     )
 
-    requirements_path = os.path.join(BASE_DIR, "requirements.txt")
-    dependencies = [requirements_path] if os.path.exists(requirements_path) else []
-
     # Define the processing step arguments
     step_args = framework_processor.run(
     outputs=[
@@ -222,7 +219,7 @@ def get_pipeline(
     code="preprocess.py",
     source_dir=BASE_DIR,
     arguments=["--input-data", input_data.default_value],
-    dependencies=dependencies
+    dependencies=[os.path.join(BASE_DIR, "requirements.txt")],
     )
 
     step_process = ProcessingStep(
