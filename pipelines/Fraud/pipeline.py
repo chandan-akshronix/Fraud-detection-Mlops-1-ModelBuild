@@ -44,6 +44,7 @@ from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.tuner import HyperparameterTuner, IntegerParameter, ContinuousParameter
 
+import imblearn
 from imblearn.over_sampling import BorderlineSMOTE
 from imblearn.under_sampling import RandomUnderSampler
 
