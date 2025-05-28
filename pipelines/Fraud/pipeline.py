@@ -189,10 +189,6 @@ def get_pipeline(
     register_new_baseline_model_explainability = ParameterBoolean(name="RegisterNewModelExplainabilityBaseline", default_value=False)
     supplied_baseline_constraints_model_explainability = ParameterString(name="ModelExplainabilitySuppliedBaselineConstraints", default_value='')
 
-    print("BASE_DIR =", BASE_DIR)
-    print("Expected requirements.txt path:", os.path.join(BASE_DIR, "requirements.txt"))
-    print("File exists:", os.path.exists(os.path.join(BASE_DIR, "requirements.txt")))
-
     # Retrieve the scikit-learn image URI
     image_uri = sagemaker.image_uris.retrieve(
         framework="sklearn",
@@ -223,7 +219,8 @@ def get_pipeline(
     ],
     code="preprocess.py",
     source_dir=BASE_DIR,
-    arguments=["--input-data", input_data.default_value]
+    arguments=["--input-data", input_data.default_value],
+    dependencies=[os.path.join(BASE_DIR, "requirements.txt")]
     )
 
     step_process = ProcessingStep(
