@@ -18,7 +18,7 @@ from sagemaker.model_metrics import MetricsSource, ModelMetrics, FileSource
 from sagemaker.drift_check_baselines import DriftCheckBaselines
 from sagemaker.processing import ProcessingInput,ProcessingOutput, ScriptProcessor, FrameworkProcessor
 from sagemaker.sklearn.processing import SKLearnProcessor
-from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo
+from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo, ConditionEquals
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 
@@ -175,12 +175,12 @@ def get_pipeline(
     supplied_baseline_constraints_model_quality = ParameterString(name="ModelQualitySuppliedConstraints", default_value='')
 
     # for model bias check step
-    skip_check_model_bias = ParameterBoolean(name="SkipModelBiasCheck", default_value=False)
+    skip_check_model_bias = ParameterBoolean(name="SkipModelBiasCheck", default_value=True)
     register_new_baseline_model_bias = ParameterBoolean(name="RegisterNewModelBiasBaseline", default_value=False)
     supplied_baseline_constraints_model_bias = ParameterString(name="ModelBiasSuppliedBaselineConstraints", default_value='')
 
     # for model explainability check step
-    skip_check_model_explainability = ParameterBoolean(name="SkipModelExplainabilityCheck", default_value=False)
+    skip_check_model_explainability = ParameterBoolean(name="SkipModelExplainabilityCheck", default_value=True)
     register_new_baseline_model_explainability = ParameterBoolean(name="RegisterNewModelExplainabilityBaseline", default_value=False)
     supplied_baseline_constraints_model_explainability = ParameterString(name="ModelExplainabilitySuppliedBaselineConstraints", default_value='')
 
@@ -214,7 +214,8 @@ def get_pipeline(
     ],
     code="preprocess.py",
     source_dir=BASE_DIR,
-    arguments=["--input-data", input_data.default_value]
+    arguments=["--input-data", input_data.default_value],
+    logs=False
     )
 
     step_process = ProcessingStep(
@@ -499,6 +500,13 @@ def get_pipeline(
         model_package_group_name=model_package_group_name
     )
 
+    should_run_bias = ConditionStep(
+        name="RunModelBiasCheckCondition",
+        conditions=[ConditionEquals(skip_check_model_bias, False)],
+        if_steps=[model_bias_check_step],
+        else_steps=[]
+    )
+
     ### Check Model Explainability
 
     # SageMaker Clarify uses a model-agnostic feature attribution approach, which you can used to understand
@@ -521,7 +529,7 @@ def get_pipeline(
     )
     shap_config = SHAPConfig(
         seed=123,
-        num_samples=10
+        num_samples=10000
     )
     model_explainability_check_config = ModelExplainabilityCheckConfig(
         data_config=model_explainability_data_config,
@@ -536,6 +544,13 @@ def get_pipeline(
         register_new_baseline=register_new_baseline_model_explainability,
         supplied_baseline_constraints=supplied_baseline_constraints_model_explainability,
         model_package_group_name=model_package_group_name
+    )
+
+    should_run_explain = ConditionStep(
+        name="RunModelExplainabilityCondition",
+        conditions=[ConditionEquals(skip_check_model_explainability, False)],
+        if_steps=[model_explainability_check_step],
+        else_steps=[]
     )
 
     # New EvaluatePostTransform step (replaces original EvaluateFraudModel)
@@ -734,7 +749,7 @@ def get_pipeline(
             register_new_baseline_model_explainability,
             supplied_baseline_constraints_model_explainability
         ],
-        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, model_bias_check_step, model_explainability_check_step, step_eval_post_transform, step_cond],
+        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, should_run_bias, should_run_explain, step_eval_post_transform, step_cond],
         sagemaker_session=pipeline_session,
     )
     return pipeline
