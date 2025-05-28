@@ -8,7 +8,7 @@ phases:
       - pip install --upgrade --force-reinstall . "awscli>1.20.30"
       - pip install --upgrade sagemaker 
       - pip install --upgrade xgboost==1.7.1
-      - pip install --imbalanced-learn
+      - pip install --upgrade imblearn
   
   build:
     commands:
