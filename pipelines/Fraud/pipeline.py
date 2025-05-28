@@ -219,6 +219,7 @@ def get_pipeline(
     code="preprocess.py",
     source_dir=BASE_DIR,
     arguments=["--input-data", input_data.default_value],
+    dependencies=[os.path.join(BASE_DIR, "requirements.txt")],
     logs=False
     )
 

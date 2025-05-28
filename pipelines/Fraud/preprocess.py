@@ -8,6 +8,7 @@ import tarfile
 import boto3
 import numpy as np
 import pandas as pd
+import imblearn
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
