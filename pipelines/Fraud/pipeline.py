@@ -44,6 +44,9 @@ from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.tuner import HyperparameterTuner, IntegerParameter, ContinuousParameter
 
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.under_sampling import RandomUnderSampler
+
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
