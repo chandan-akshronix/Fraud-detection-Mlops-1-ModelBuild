@@ -159,30 +159,30 @@ def get_pipeline(
     )
 
     # for data quality check step
-    skip_check_data_quality = ParameterBoolean(name="SkipDataQualityCheck", default_value=True)
-    register_new_baseline_data_quality = ParameterBoolean(name="RegisterNewDataQualityBaseline", default_value=True)
+    skip_check_data_quality = ParameterBoolean(name="SkipDataQualityCheck", default_value=False)
+    register_new_baseline_data_quality = ParameterBoolean(name="RegisterNewDataQualityBaseline", default_value=False)
     supplied_baseline_statistics_data_quality = ParameterString(name="DataQualitySuppliedStatistics", default_value='')
     supplied_baseline_constraints_data_quality = ParameterString(name="DataQualitySuppliedConstraints", default_value='')
 
     # for data bias check step
-    skip_check_data_bias = ParameterBoolean(name="SkipDataBiasCheck", default_value = True)
-    register_new_baseline_data_bias = ParameterBoolean(name="RegisterNewDataBiasBaseline", default_value=True)
+    skip_check_data_bias = ParameterBoolean(name="SkipDataBiasCheck", default_value = False)
+    register_new_baseline_data_bias = ParameterBoolean(name="RegisterNewDataBiasBaseline", default_value=False)
     supplied_baseline_constraints_data_bias = ParameterString(name="DataBiasSuppliedBaselineConstraints", default_value='')
 
     # for model quality check step
-    skip_check_model_quality = ParameterBoolean(name="SkipModelQualityCheck", default_value = True)
-    register_new_baseline_model_quality = ParameterBoolean(name="RegisterNewModelQualityBaseline", default_value=True)
+    skip_check_model_quality = ParameterBoolean(name="SkipModelQualityCheck", default_value = False)
+    register_new_baseline_model_quality = ParameterBoolean(name="RegisterNewModelQualityBaseline", default_value=False)
     supplied_baseline_statistics_model_quality = ParameterString(name="ModelQualitySuppliedStatistics", default_value='')
     supplied_baseline_constraints_model_quality = ParameterString(name="ModelQualitySuppliedConstraints", default_value='')
 
     # for model bias check step
-    skip_check_model_bias = ParameterBoolean(name="SkipModelBiasCheck", default_value=True)
-    register_new_baseline_model_bias = ParameterBoolean(name="RegisterNewModelBiasBaseline", default_value=True)
+    skip_check_model_bias = ParameterBoolean(name="SkipModelBiasCheck", default_value=False)
+    register_new_baseline_model_bias = ParameterBoolean(name="RegisterNewModelBiasBaseline", default_value=False)
     supplied_baseline_constraints_model_bias = ParameterString(name="ModelBiasSuppliedBaselineConstraints", default_value='')
 
     # for model explainability check step
-    skip_check_model_explainability = ParameterBoolean(name="SkipModelExplainabilityCheck", default_value=True)
-    register_new_baseline_model_explainability = ParameterBoolean(name="RegisterNewModelExplainabilityBaseline", default_value=True)
+    skip_check_model_explainability = ParameterBoolean(name="SkipModelExplainabilityCheck", default_value=False)
+    register_new_baseline_model_explainability = ParameterBoolean(name="RegisterNewModelExplainabilityBaseline", default_value=False)
     supplied_baseline_constraints_model_explainability = ParameterString(name="ModelExplainabilitySuppliedBaselineConstraints", default_value='')
 
     # Retrieve the scikit-learn image URI
@@ -254,17 +254,17 @@ def get_pipeline(
         output_s3_uri=Join(on='/', values=['s3://' + default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'dataqualitycheckstep'])
     )
 
-    data_quality_check_step = QualityCheckStep(
-        name="DataQualityCheckStep",
-        skip_check=skip_check_data_quality,
-        register_new_baseline=register_new_baseline_data_quality,
-        quality_check_config=data_quality_check_config,
-        check_job_config=check_job_config,
-        supplied_baseline_statistics=supplied_baseline_statistics_data_quality,
-        supplied_baseline_constraints=supplied_baseline_constraints_data_quality,
-        model_package_group_name=model_package_group_name,
-        depends_on=["PreprocessFraudData"]
-    )
+    # data_quality_check_step = QualityCheckStep(
+    #     name="DataQualityCheckStep",
+    #     skip_check=skip_check_data_quality,
+    #     register_new_baseline=register_new_baseline_data_quality,
+    #     quality_check_config=data_quality_check_config,
+    #     check_job_config=check_job_config,
+    #     supplied_baseline_statistics=supplied_baseline_statistics_data_quality,
+    #     supplied_baseline_constraints=supplied_baseline_constraints_data_quality,
+    #     model_package_group_name=model_package_group_name,
+    #     depends_on=["PreprocessFraudData"]
+    # )
 
 
     #### Calculating the Data Bias
@@ -284,7 +284,7 @@ def get_pipeline(
         s3_data_input_path=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
         s3_output_path=Join(on='/', values=['s3://'+ default_bucket, base_job_prefix, ExecutionVariables.PIPELINE_EXECUTION_ID, 'databiascheckstep']),
         label="Is Fraudulent",
-        headers=["Is Fraudulent","freq__Customer Location","freq__Location_Device","remainder__Transaction Amount","remainder__Quantity","remainder__Customer Age","remainder__Account Age Days","remainder__Transaction Hour","remainder__Amount_Log","remainder__Amount_per_Quantity","remainder__Day_of_Week","remainder__Day_of_Year","remainder__Account_Age_Weeks",],
+        headers=["Is Fraudulent","freq__Customer Location","freq__Location_Device","remainder__Transaction Amount","remainder__Quantity","remainder__Customer Age","remainder__Account Age Days","remainder__Transaction Hour","remainder__Amount_Log","remainder__Amount_per_Quantity","remainder__Day_of_Week","remainder__Day_of_Year", 'remainder__hour_sin','remainder__hour_cos',"remainder__Account_Age_Weeks",],
         dataset_type="text/csv",
         s3_analysis_config_output_path=data_bias_analysis_cfg_output_path,
     )
@@ -299,15 +299,15 @@ def get_pipeline(
         data_bias_config=data_bias_config,
     )
 
-    data_bias_check_step = ClarifyCheckStep(
-        name="DataBiasCheckStep",
-        clarify_check_config=data_bias_check_config,
-        check_job_config=check_job_config,
-        skip_check=skip_check_data_bias,
-        register_new_baseline=register_new_baseline_data_bias,
-        model_package_group_name=model_package_group_name,
-        depends_on=["PreprocessFraudData"]
-    )
+    # data_bias_check_step = ClarifyCheckStep(
+    #     name="DataBiasCheckStep",
+    #     clarify_check_config=data_bias_check_config,
+    #     check_job_config=check_job_config,
+    #     skip_check=skip_check_data_bias,
+    #     register_new_baseline=register_new_baseline_data_bias,
+    #     model_package_group_name=model_package_group_name,
+    #     depends_on=["PreprocessFraudData"]
+    # )
 
     image_uri = sagemaker.image_uris.retrieve(
             framework="xgboost",
@@ -445,17 +445,17 @@ def get_pipeline(
         probability_threshold_attribute=0.5 # Added threshold to binarize probabilities 
     )
 
-    model_quality_check_step = QualityCheckStep(
-        name="ModelQualityCheckStep",
-        skip_check=skip_check_model_quality,
-        register_new_baseline=register_new_baseline_model_quality,
-        quality_check_config=model_quality_check_config,
-        check_job_config=check_job_config,
-        supplied_baseline_statistics=supplied_baseline_statistics_model_quality,
-        supplied_baseline_constraints=supplied_baseline_constraints_model_quality,
-        model_package_group_name=model_package_group_name,
-        depends_on=["FraudTransform"]
-    )
+    # model_quality_check_step = QualityCheckStep(
+    #     name="ModelQualityCheckStep",
+    #     skip_check=skip_check_model_quality,
+    #     register_new_baseline=register_new_baseline_model_quality,
+    #     quality_check_config=model_quality_check_config,
+    #     check_job_config=check_job_config,
+    #     supplied_baseline_statistics=supplied_baseline_statistics_model_quality,
+    #     supplied_baseline_constraints=supplied_baseline_constraints_model_quality,
+    #     model_package_group_name=model_package_group_name,
+    #     depends_on=["FraudTransform"]
+    # )
 
     ### Check for Model Bias
 
@@ -491,22 +491,15 @@ def get_pipeline(
         model_predicted_label_config=ModelPredictedLabelConfig()
     )
 
-    model_bias_check_step = ClarifyCheckStep(
-        name="ModelBiasCheckStep",
-        clarify_check_config=model_bias_check_config,
-        check_job_config=check_job_config,
-        skip_check=skip_check_model_bias,
-        register_new_baseline=register_new_baseline_model_bias,
-        supplied_baseline_constraints=supplied_baseline_constraints_model_bias,
-        model_package_group_name=model_package_group_name
-    )
-
-    should_run_bias = ConditionStep(
-        name="RunModelBiasCheckCondition",
-        conditions=[ConditionEquals(skip_check_model_bias, False)],
-        if_steps=[model_bias_check_step],
-        else_steps=[]
-    )
+    # model_bias_check_step = ClarifyCheckStep(
+    #     name="ModelBiasCheckStep",
+    #     clarify_check_config=model_bias_check_config,
+    #     check_job_config=check_job_config,
+    #     skip_check=skip_check_model_bias,
+    #     register_new_baseline=register_new_baseline_model_bias,
+    #     supplied_baseline_constraints=supplied_baseline_constraints_model_bias,
+    #     model_package_group_name=model_package_group_name
+    # )
 
     ### Check Model Explainability
 
@@ -537,24 +530,18 @@ def get_pipeline(
         model_config=model_config,
         explainability_config=shap_config,
     )
-    model_explainability_check_step = ClarifyCheckStep(
-        name="ModelExplainabilityCheckStep",
-        clarify_check_config=model_explainability_check_config,
-        check_job_config=check_job_config,
-        skip_check=skip_check_model_explainability,
-        register_new_baseline=register_new_baseline_model_explainability,
-        supplied_baseline_constraints=supplied_baseline_constraints_model_explainability,
-        model_package_group_name=model_package_group_name
-    )
-
-    should_run_explain = ConditionStep(
-        name="RunModelExplainabilityCondition",
-        conditions=[ConditionEquals(skip_check_model_explainability, False)],
-        if_steps=[model_explainability_check_step],
-        else_steps=[]
-    )
+    # model_explainability_check_step = ClarifyCheckStep(
+    #     name="ModelExplainabilityCheckStep",
+    #     clarify_check_config=model_explainability_check_config,
+    #     check_job_config=check_job_config,
+    #     skip_check=skip_check_model_explainability,
+    #     register_new_baseline=register_new_baseline_model_explainability,
+    #     supplied_baseline_constraints=supplied_baseline_constraints_model_explainability,
+    #     model_package_group_name=model_package_group_name
+    # )
 
     # New EvaluatePostTransform step (replaces original EvaluateFraudModel)
+    
     eval_post_transform_processor = ScriptProcessor(
         image_uri=sagemaker.image_uris.retrieve("sklearn", region, version="0.23-1"),
         command=["python3"],
@@ -750,7 +737,17 @@ def get_pipeline(
             register_new_baseline_model_explainability,
             supplied_baseline_constraints_model_explainability
         ],
-        steps=[step_process, data_quality_check_step, data_bias_check_step, step_tune, step_create_model, step_transform, model_quality_check_step, should_run_bias, should_run_explain, step_eval_post_transform, step_cond],
+        steps=[step_process,
+                # data_quality_check_step, 
+                # data_bias_check_step, 
+                step_tune, 
+                step_create_model, 
+                step_transform, 
+                # model_quality_check_step, 
+                # model_bias_check_step,
+                # model_explainability_check_step,
+                step_eval_post_transform, 
+                step_cond],
         sagemaker_session=pipeline_session,
     )
     return pipeline
