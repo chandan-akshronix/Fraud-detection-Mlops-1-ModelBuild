@@ -44,10 +44,6 @@ from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.tuner import HyperparameterTuner, IntegerParameter, ContinuousParameter
 
-# import imblearn
-# from imblearn.over_sampling import BorderlineSMOTE
-# from imblearn.under_sampling import RandomUnderSampler
-
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -219,8 +215,7 @@ def get_pipeline(
     ],
     code="preprocess.py",
     source_dir=BASE_DIR,
-    arguments=["--input-data", input_data.default_value],
-    dependencies=[os.path.join(BASE_DIR, "requirements.txt")]
+    arguments=["--input-data", input_data.default_value]
     )
 
     step_process = ProcessingStep(
